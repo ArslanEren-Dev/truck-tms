@@ -27,7 +27,7 @@ Issues = "https://github.com/ArslanEren-Dev/truck-tms/issues"
 Download = "https://github.com/ArslanEren-Dev/truck-tms/releases/latest"
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "ruff>=0.6"]
+dev = ["pytest>=7", "pytest-timeout>=2", "ruff>=0.6"]
 
 [project.gui-scripts]
 truck-tms = "truck_tms.__main__:main"
@@ -53,4 +53,6 @@ ignore = ["SIM105", "SIM108", "PERF401", "C408"]
 "truck_tms/i18n.py" = ["E501"]  # one translation per line, even when it is long
 
 [tool.pytest.ini_options]
+# a test that hangs (e.g. on a dialog) fails with a stack trace instead of blocking CI for hours
+timeout = 120
 testpaths = ["tests"]
