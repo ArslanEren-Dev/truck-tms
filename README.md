@@ -9,7 +9,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.5.0-1E63C6" alt="version">
-  <img src="https://img.shields.io/badge/python-3.11%2B-3776AB" alt="python">
+  <img src="https://img.shields.io/badge/python-3.12%2B-3776AB" alt="python">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-555" alt="platform">
   <img src="https://img.shields.io/badge/language-English%20%7C%20T%C3%BCrk%C3%A7e-1E63C6" alt="languages">
   <img src="https://img.shields.io/badge/license-MIT-F5A623" alt="license">
@@ -127,7 +127,7 @@ To try the app with sample data in a separate file, run `TruckTMS.exe --db demo.
 
 ## Install & run from source
 
-Requires Python 3.11+.
+Requires Python 3.12+.
 
 ```bash
 git clone https://github.com/ArslanEren-Dev/truck-tms.git
@@ -285,7 +285,7 @@ Exe'yi kendiniz derlemek için `powershell -ExecutionPolicy Bypass -File build_e
 
 ### Kaynak koddan kurulum
 
-Python 3.11 veya üzeri gerekir.
+Python 3.12 veya üzeri gerekir.
 
 ```bash
 git clone https://github.com/ArslanEren-Dev/truck-tms.git

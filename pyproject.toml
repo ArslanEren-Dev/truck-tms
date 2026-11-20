@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "ArslanEren-Dev" }]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = ["PySide6>=6.5"]
 keywords = ["tms", "trucking", "logistics", "fleet", "dispatch", "pyside6"]
 classifiers = [
