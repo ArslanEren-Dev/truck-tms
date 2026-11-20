@@ -372,8 +372,18 @@ def test_program_starts_with_splash_and_demo_data(app, tmp_path):
     from truck_tms.__main__ import main
 
     path = tmp_path / "start.db"
-    QTimer.singleShot(3500, app.quit)  # splash takes ~2.4 s, then the window shows
+    # quit once the main window is up (after the ~2.4 s splash). Polling instead of a fixed delay:
+    # app.quit() before app.exec() has started does nothing, so a slow start-up would hang the test.
+    def quit_when_window_shows():
+        if any(w.objectName() == "MainWindow" and w.isVisible() for w in QApplication.topLevelWidgets()):
+            poll.stop()
+            QTimer.singleShot(300, app.quit)
+
+    poll = QTimer()
+    poll.timeout.connect(quit_when_window_shows)
+    poll.start(100)
     assert main(["--db", str(path), "--demo"]) == 0
+    poll.stop()
     db = Database(path)
     assert len(db.list_trucks()) == 3
     db.close()
