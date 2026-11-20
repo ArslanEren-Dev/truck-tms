@@ -50,6 +50,29 @@ It is written in Python + Qt (PySide6), stores its data in a single SQLite file,
   - **Owner additions and deductions** (insurance, trailer rental, ELD…) and the final **owner payout**.
   - **Export** an owner statement PDF, a driver statement PDF, a CSV, or all three. You can export this statement
     or every statement of the week, and **choose the folder and the file name**. The app remembers the folder.
+- **Invoices and receivables** *(new in 0.6)*:
+  - Select a load and click **Invoice**. The amount and the broker are filled in for you, and the invoice number counts
+    up by itself (`INV-0001`…, prefix in Settings).
+  - Payment terms (Net 30…), **quick pay** or **factoring** with its fee, partial payments, and the **balance due**.
+    The load's status follows the invoice: *Invoiced*, then *Paid*.
+  - The Invoices page shows what is **open**, what is **overdue**, what was **collected** in the last 30 days, the
+    **average days to pay**, and an **aging** ring (not due yet · 1–30 · 31–60 · 61–90 · 90+ days late).
+  - Save a clean **PDF invoice** with your company details, the load, line haul and accessorials.
+- **Compliance reminders** *(new in 0.6)*: track what expires.
+  - Driver items: **CDL**, **DOT medical card**, drug & alcohol test, MVR.
+  - Truck items: **registration (IRP)**, **insurance**, **annual DOT inspection**, permits.
+  - Company items: **UCR**, **Form 2290**, **MCS-150**, IFTA license.
+  - Each item is shown as *Valid*, *Expires soon* (30 days) or *Expired*. Expired and expiring items show up on the Overview.
+- **IFTA quarterly worksheet** *(new in 0.6)*:
+  - Split a load's miles by state, and add gallons and the state to fuel expenses.
+  - The IFTA page works out **fleet MPG**, **taxable gallons**, **tax-paid gallons**, **net gallons** and the
+    **tax or credit** per state, for one truck or the whole fleet.
+  - You enter the quarter's tax rates yourself, from the IFTA rate matrix.
+  - Export it as PDF/CSV or print it.
+  - It warns you about miles without a state split and about missing rates.
+- **Update check** *(new in 0.6)*: once a day the app asks GitHub whether a new version is out.
+  If there is one, an *Update available* button appears. You can also run the check from **Help → Check for updates**,
+  or turn it off in Settings. The app only reads the public release page and sends no data.
 - **Maintenance**: service records with odometer, cost, shop, details, and the next due date or odometer.
   Trucks that are due for service are highlighted.
 - **Expenses** and a **Truck report** for any date range: gross, miles, expenses + maintenance, and net. Export it as PDF/CSV or print it.
@@ -58,11 +81,14 @@ It is written in Python + Qt (PySide6), stores its data in a single SQLite file,
   - **File** menu: *New data file*, *Open data file*, *Save* (Ctrl+S), *Save a backup copy*, *Open data folder*.
   - **Automatic daily backups** of the last 14 days are kept in a `backups` folder next to the data file.
   - The app reopens the file you used last.
-- **Overview**: this week's gross and miles, loads on the road, active trucks, unpaid driver pay and trucks due for
-  service. The numbers count up when the page opens.
-  - **Charts**: weekly gross for the last 8 weeks, revenue per mile, and top brokers of the last 90 days.
-    They animate in and show values on hover.
-  - Recent loads, reminders (service due, CDL expiring), and quick buttons for a new load, truck, driver or statement.
+- **Overview**: eight key numbers that count up when the page opens. They are this week's gross and miles, loads on
+  the road, active trucks, unpaid driver pay, receivables, trucks due for service and expiring documents.
+  - **Charts**: weekly gross for the last 8 weeks, revenue per mile, top brokers, and expenses by category.
+    The bars grow one after another and the line is a smooth curve. A highlight glides with the mouse and a bubble
+    shows the value.
+  - Recent loads, and reminders for service due, expired or expiring documents and late invoices.
+  - Quick buttons for a new load, truck, driver, statement or invoice.
+- **Fast with big data**: with 6,000 loads, the Overview refreshes in about 20 ms and the window opens in under a second.
 - **Import from Excel or CSV**:
   - Bring your existing loads in from a spreadsheet (`.xlsx` or `.csv`).
   - Columns are matched automatically from English or Turkish headers ("Load #", "PU Date", "DH", "Navlun"…).
@@ -86,8 +112,12 @@ It is written in Python + Qt (PySide6), stores its data in a single SQLite file,
 - **Settings**: language, theme, company name and address for documents, currency, miles or km,
   the weekday statement weeks start on, and the default company fee %.
 
-| Weekly statement | Trucks |
+| Invoices & receivables | Compliance reminders |
 |---|---|
+| ![Invoices](docs/screenshots/invoices.png) | ![Compliance](docs/screenshots/compliance.png) |
+| **IFTA quarterly worksheet** | **Invoice** |
+| ![IFTA](docs/screenshots/ifta.png) | ![Invoice](docs/screenshots/invoice.png) |
+| **Weekly statement** | **Trucks** |
 | ![Statement](docs/screenshots/statement.png) | ![Trucks](docs/screenshots/trucks.png) |
 | **Loads** | **Statements** |
 | ![Loads](docs/screenshots/loads.png) | ![Statements](docs/screenshots/statements.png) |
@@ -240,6 +270,30 @@ Python + Qt (PySide6) ile yazılmıştır. Veriler tek bir SQLite dosyasında tu
   - **Tır sahibi kesintileri ve eklemeleri** (sigorta, trailer kirası, ELD…) ve sonuçta **tır sahibine ödenecek tutar (owner payout)**.
   - **Dışa aktarma**: tır sahibi PDF'i, sürücü PDF'i, CSV veya üçü birden. Yalnızca bu statement ya da o haftanın
     bütün statement'ları seçilebilir. **Klasör ve dosya adı sizin seçiminizdir**; seçilen klasör hatırlanır.
+- **Faturalar ve alacaklar** *(0.6'da yeni)*:
+  - Bir yükü seçip **Fatura**'ya tıklayın. Tutar ve broker otomatik dolar, fatura numarası kendiliğinden artar
+    (`INV-0001`…; ön ek Ayarlar'dan değiştirilir).
+  - Ödeme vadesi (Net 30…), **quick pay** ya da kesintisiyle **factoring**, kısmi ödemeler ve **kalan borç** girilebilir.
+    Yükün durumu faturayı izler: önce *Faturalandı*, sonra *Ödendi*.
+  - Faturalar sayfasında **açık alacak**, **gecikmedeki tutar**, son 30 günün **tahsilatı**, **ortalama ödeme süresi**
+    ve **yaşına göre alacaklar** halkası görünür (vadesi gelmedi · 1–30 · 31–60 · 61–90 · 90+ gün gecikme).
+  - Şirket bilgileriniz, yük detayları ve ücret kalemleriyle düzenli bir **PDF fatura** kaydedin.
+- **Belge takibi** *(0.6'da yeni)*: süresi dolan her şeyi takip edin.
+  - Sürücü belgeleri: **CDL**, **DOT sağlık kartı**, uyuşturucu & alkol testi, MVR.
+  - Tır belgeleri: **ruhsat (IRP)**, **sigorta**, **yıllık DOT muayenesi**, izin belgeleri.
+  - Şirket belgeleri: **UCR**, **Form 2290**, **MCS-150**, IFTA lisansı.
+  - Her biri *Geçerli*, *Yakında doluyor* (30 gün) veya *Süresi doldu* olarak gösterilir. Süresi dolanlar ve dolmak
+    üzere olanlar Genel Bakış'ta da görünür.
+- **IFTA çeyreklik tablosu** *(0.6'da yeni)*:
+  - Yükün millerini eyaletlere bölün, yakıt masraflarına galon ve eyalet girin.
+  - IFTA sayfası her eyalet için **filo MPG**, **vergiye tabi galon**, **vergisi ödenmiş galon**, **net galon** ve
+    **vergi/alacak** hesaplar. Tek bir tır ya da tüm filo için çalışır.
+  - Çeyreğin vergi oranlarını IFTA oran tablosundan siz girersiniz.
+  - Tablo PDF/CSV olarak dışa aktarılabilir ya da yazdırılabilir.
+  - Eyalete bölünmemiş miller ve eksik oranlar için uyarı verir.
+- **Güncelleme bildirimi** *(0.6'da yeni)*: uygulama günde bir kez GitHub'a yeni sürüm olup olmadığını sorar.
+  Yeni sürüm varsa *Güncelleme var* butonu çıkar. **Yardım → Güncellemeleri denetle** ile elle de bakabilir, Ayarlar'dan
+  kapatabilirsiniz. Uygulama yalnızca herkese açık sürüm sayfasını okur, hiçbir veri göndermez.
 - **Bakım**: sayaç, tutar, servis, detaylar, sonraki bakım tarihi veya sayacı. Bakımı gelen tırlar kırmızı ile işaretlenir.
 - **Masraflar** ve tarih aralığına göre **tır raporu** (PDF/CSV olarak dışa aktarma veya yazdırma).
 - **Verileriniz her zaman kayıtlı**:
@@ -247,11 +301,13 @@ Python + Qt (PySide6) ile yazılmıştır. Veriler tek bir SQLite dosyasında tu
   - **Dosya** menüsü: *Yeni veri dosyası*, *Veri dosyası aç*, *Kaydet* (Ctrl+S), *Yedek kopya kaydet*, *Veri klasörünü aç*.
   - Veri dosyasının yanındaki `backups` klasöründe **son 14 günün otomatik yedeği** tutulur.
   - Uygulama en son kullandığınız dosyayı açar.
-- **Genel Bakış**: bu haftanın brütü ve mili, yoldaki yükler, aktif tırlar, sürücülere ödenmemiş tutar ve bakımı gelen
-  tırlar. Sayfa açılınca sayılar animasyonla artar.
-  - **Grafikler**: son 8 haftanın brütü, mil başına gelir ve son 90 günün en iyi broker'ları. Animasyonla gelirler ve
-    fareyle üzerine gelince değerleri gösterirler.
-  - Son yükler, hatırlatmalar (bakım zamanı, ehliyet süresi) ve yeni yük, tır, sürücü ya da statement için hızlı butonlar.
+- **Genel Bakış**: sayfa açılınca animasyonla artan sekiz gösterge. Bunlar bu haftanın brütü ve mili, yoldaki yükler,
+  aktif tırlar, sürücülere ödenmemiş tutar, alacaklar, bakımı gelen tırlar ve süresi dolan belgelerdir.
+  - **Grafikler**: son 8 haftanın brütü, mil başına gelir, en iyi broker'lar ve kategoriye göre masraflar.
+    Çubuklar sırayla büyür, çizgi yumuşak bir eğridir. Fareyi kayarak izleyen bir vurgu ve değer baloncuğu vardır.
+  - Son yükler ve hatırlatmalar: bakım zamanı, süresi dolan ya da dolmak üzere olan belgeler, geciken faturalar.
+  - Yeni yük, tır, sürücü, statement veya fatura için hızlı butonlar.
+- **Büyük veride hızlı**: 6.000 yükte Genel Bakış yaklaşık 20 ms'de yenilenir, pencere bir saniyeden kısa sürede açılır.
 - **Excel veya CSV'den aktarma**:
   - Mevcut yüklerinizi bir tablodan (`.xlsx` veya `.csv`) içeri alın.
   - Sütunlar Türkçe ya da İngilizce başlıklarına göre otomatik eşleştirilir ("Yük No", "Navlun", "PU Date", "DH"…);

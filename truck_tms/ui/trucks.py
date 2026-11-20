@@ -29,9 +29,7 @@ from .widgets import (
     driver_combo,
     fill_table,
     make_table,
-    selected_id,
     set_combo_data,
-    search_box,
     show_error,
     status_badge,
 )
@@ -176,12 +174,8 @@ class TrucksTab(CrudTab):
 
     def __init__(self, db: Database, parent: QWidget | None = None):
         super().__init__(db, parent)
-        self.history_btn = button(t("btn.plate_history"), None, "history")
-        self.history_btn.clicked.connect(self.show_history)
-        self.toolbar.insertWidget(3, self.history_btn)
-        self.search = search_box()
-        self.search.textChanged.connect(self.refresh)
-        self.add_filter(self.search)
+        self.history_btn = self.add_tool(t("btn.plate_history"), "history", self.show_history)
+        self.search = self.add_search()
         self.refresh()
 
     def headers(self) -> list[str]:
@@ -193,11 +187,14 @@ class TrucksTab(CrudTab):
 
     def rows(self):
         drivers = {d.id: d.name for d in self.db.list_drivers()}
-        theme = self.db.get_settings()["theme"]
-        unit = self.db.get_settings()["distance_unit"]
+        settings = self.db.get_settings()
+        theme, unit = settings["theme"], settings["distance_unit"]
+        by_truck: dict[int, list] = {}
+        for m in self.db.list_maintenance():  # one query for all trucks, newest first
+            by_truck.setdefault(m.truck_id, []).append(m)
         rows = []
         for tr in self.db.list_trucks(self.search.text()):
-            records = self.db.list_maintenance(truck_id=tr.id)
+            records = by_truck.get(tr.id, [])
             last = records[0] if records else None
             due = any(self.db.maintenance_due(m, tr) for m in records)
             last_text = f"{last.date} · {t('service.' + last.service_type)}" if last else ""
@@ -224,8 +221,6 @@ class TrucksTab(CrudTab):
         return True
 
     def show_history(self) -> None:
-        record_id = selected_id(self.table)
-        if record_id is None:
-            show_error(self, "select_row")
-            return
-        PlateHistoryDialog(self.db, self.db.get_truck(record_id), self).exec()
+        record_id = self.selected_or_warn()
+        if record_id is not None:
+            PlateHistoryDialog(self.db, self.db.get_truck(record_id), self).exec()

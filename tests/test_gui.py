@@ -186,7 +186,8 @@ def test_help_menu_links_to_github(window, monkeypatch):
     monkeypatch.setattr(MainWindow, "open_url", staticmethod(opened.append))
     help_menu = window.menuBar().actions()[1].menu()
     texts = [a.text() for a in help_menu.actions() if not a.isSeparator()]
-    assert texts == ["Project Website", "Source Code on GitHub", "Report a Problem…", "About Truck TMS"]
+    assert texts == ["Project Website", "Source Code on GitHub", "Report a Problem…", "Check for updates…",
+                     "About Truck TMS"]
     for action in help_menu.actions()[:3]:
         action.trigger()
     assert opened == [truck_tms.WEBSITE_URL, truck_tms.PROJECT_URL, truck_tms.PROJECT_URL + "/issues"]

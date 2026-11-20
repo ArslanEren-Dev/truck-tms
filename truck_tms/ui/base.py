@@ -3,13 +3,34 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QLineEdit, QStackedWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ..database import Database
 from ..i18n import t
 from .theme import icon, token
 from .toast import show_toast
-from .widgets import button, confirm, fill_table, make_table, selected_id, show_error
+from .widgets import (
+    button,
+    confirm,
+    driver_combo,
+    fill_driver_combo,
+    fill_table,
+    fill_truck_combo,
+    make_table,
+    search_box,
+    selected_id,
+    show_error,
+    truck_combo,
+)
 
 
 class EmptyState(QWidget):
@@ -77,6 +98,9 @@ class CrudTab(QWidget):
     def __init__(self, db: Database, parent: QWidget | None = None):
         super().__init__(parent)
         self.db = db
+        self._truck_filters: list[QComboBox] = []
+        self._driver_filters: list[QComboBox] = []
+        self._tools = 0
         self.toolbar = QHBoxLayout()
         self.toolbar.setSpacing(8)
         self.add_btn = button(t("btn.add"), "primary", "plus")
@@ -123,8 +147,46 @@ class CrudTab(QWidget):
         raise NotImplementedError
 
     # -- shared behaviour ----------------------------------------------------
-    def add_filter(self, widget: QWidget) -> None:
+    def add_filter(self, widget: QWidget, label: str | None = None) -> None:
+        if label:
+            self.toolbar.addWidget(QLabel(label))
         self.toolbar.addWidget(widget)
+
+    def add_truck_filter(self, label: bool = True) -> QComboBox:
+        """An "All trucks / truck…" filter that reloads the list and keeps its truck list current."""
+        combo = truck_combo(self.db, include_all=True)
+        combo.currentIndexChanged.connect(self.refresh)
+        self.add_filter(combo, t("truck") if label else None)
+        self._truck_filters.append(combo)
+        return combo
+
+    def add_driver_filter(self) -> QComboBox:
+        combo = driver_combo(self.db, include_all=True)
+        combo.currentIndexChanged.connect(self.refresh)
+        self.add_filter(combo, t("driver"))
+        self._driver_filters.append(combo)
+        return combo
+
+    def add_search(self) -> QLineEdit:
+        box = search_box()
+        box.textChanged.connect(self.refresh)
+        self.add_filter(box)
+        return box
+
+    def add_tool(self, text: str, icon_name: str, slot) -> QPushButton:
+        """An extra toolbar button, placed after Add / Edit / Delete and earlier extras."""
+        btn = button(text, None, icon_name)
+        btn.clicked.connect(slot)
+        self.toolbar.insertWidget(3 + self._tools, btn)
+        self._tools += 1
+        return btn
+
+    def selected_or_warn(self) -> int | None:
+        """Id of the selected row, or None after telling the user to pick a row."""
+        record_id = selected_id(self.table)
+        if record_id is None:
+            show_error(self, "select_row")
+        return record_id
 
     def has_filters(self) -> bool:
         """True when a search text or a non-"All" filter is active in the toolbar."""
@@ -137,6 +199,10 @@ class CrudTab(QWidget):
         return False
 
     def refresh(self) -> None:
+        for combo in self._truck_filters:  # another page may have added or renamed a truck
+            fill_truck_combo(combo, self.db, include_all=True)
+        for combo in self._driver_filters:
+            fill_driver_combo(combo, self.db, include_all=True)
         rows = self.rows()
         fill_table(self.table, rows)
         if rows:
@@ -151,16 +217,13 @@ class CrudTab(QWidget):
             show_toast(t("toast.saved"))
 
     def _edit_selected(self) -> None:
-        record_id = selected_id(self.table)
-        if record_id is None:
-            show_error(self, "select_row")
-            return
-        self._open(record_id)
+        record_id = self.selected_or_warn()
+        if record_id is not None:
+            self._open(record_id)
 
     def _delete_selected(self) -> None:
-        record_id = selected_id(self.table)
+        record_id = self.selected_or_warn()
         if record_id is None:
-            show_error(self, "select_row")
             return
         try:
             if self.delete_record(record_id):

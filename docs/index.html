@@ -262,6 +262,18 @@
         <h3><span lang="en">Weekly statements</span><span lang="tr">Haftalık statement</span></h3>
         <p><span lang="en">Fuel, tolls, dispatcher fee, driver pay, deductions and the owner payout, calculated for you.</span>
           <span lang="tr">Yakıt, toll, dispatcher kesintisi, sürücü ücreti, kesintiler ve tır sahibine ödeme sizin yerinize hesaplanır.</span></p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h4"/></svg></div>
+        <h3><span lang="en">Invoices &amp; receivables</span><span lang="tr">Fatura ve alacaklar</span></h3>
+        <p><span lang="en">One click from a load to a PDF invoice. Quick pay or factoring fees, partial payments, and an aging view of who owes you.</span>
+          <span lang="tr">Yükten tek tıkla PDF fatura. Quick pay ya da factoring kesintisi, kısmi ödemeler ve kimin ne kadar geciktiğini gösteren yaşlandırma.</span></p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4"/></svg></div>
+        <h3><span lang="en">Compliance reminders</span><span lang="tr">Belge takibi</span></h3>
+        <p><span lang="en">CDL, medical card, registration, insurance, annual inspection, UCR and Form 2290. Reminders start 30 days before anything expires.</span>
+          <span lang="tr">CDL, sağlık kartı, ruhsat, sigorta, yıllık muayene, UCR ve Form 2290. Süresi dolmadan 30 gün önce hatırlatılır.</span></p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15"/></svg></div>
+        <h3><span lang="en">IFTA worksheet</span><span lang="tr">IFTA tablosu</span></h3>
+        <p><span lang="en">Miles by state and fuel by state turn into fleet MPG, taxable gallons and the tax or credit for each jurisdiction.</span>
+          <span lang="tr">Eyalet bazında mil ve yakıt; filo MPG'si, vergiye tabi galon ve her eyalet için vergi ya da alacak olarak hesaplanır.</span></p></div>
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg></div>
         <h3><span lang="en">Maintenance</span><span lang="tr">Bakım</span></h3>
         <p><span lang="en">Service records with cost and shop. The truck list warns you in red when the next service is due.</span>
@@ -278,6 +290,10 @@
         <h3><span lang="en">English &amp; Türkçe</span><span lang="tr">Türkçe &amp; English</span></h3>
         <p><span lang="en">The whole app, PDFs included, in both languages, with a white or black theme.</span>
           <span lang="tr">PDF'ler dahil uygulamanın tamamı iki dilde; beyaz veya siyah tema seçeneğiyle.</span></p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div>
+        <h3><span lang="en">Fast &amp; private</span><span lang="tr">Hızlı ve gizli</span></h3>
+        <p><span lang="en">No account, no cloud: your data stays in one file on your PC. Thousands of loads open in well under a second.</span>
+          <span lang="tr">Hesap yok, bulut yok: verileriniz bilgisayarınızda tek bir dosyada kalır. Binlerce yük bir saniyeden kısa sürede açılır.</span></p></div>
     </div>
   </div>
 </section>
@@ -319,6 +335,9 @@
     <h2><span lang="en">Have a look around</span><span lang="tr">Biraz göz atın</span></h2>
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-shot="overview"><span lang="en">Overview</span><span lang="tr">Genel Bakış</span></button>
+      <button role="tab" aria-selected="false" data-shot="invoices"><span lang="en">Invoices</span><span lang="tr">Faturalar</span></button>
+      <button role="tab" aria-selected="false" data-shot="compliance"><span lang="en">Compliance</span><span lang="tr">Belge takibi</span></button>
+      <button role="tab" aria-selected="false" data-shot="ifta"><span lang="en">IFTA</span><span lang="tr">IFTA</span></button>
       <button role="tab" aria-selected="false" data-shot="trucks"><span lang="en">Trucks</span><span lang="tr">Tırlar</span></button>
       <button role="tab" aria-selected="false" data-shot="loads"><span lang="en">Loads</span><span lang="tr">Yükler</span></button>
       <button role="tab" aria-selected="false" data-shot="drivers"><span lang="en">Drivers</span><span lang="tr">Sürücüler</span></button>
@@ -443,7 +462,10 @@ truck-tms</pre>
 
   // --- screenshot gallery
   var captions = {
-    overview: { en: "Overview: this week's gross and miles, loads on the road, unpaid driver pay and reminders.", tr: "Genel Bakış: bu haftanın brütü ve mili, yoldaki yükler, ödenmemiş sürücü ücretleri ve hatırlatmalar." },
+    overview: { en: "Overview: eight key numbers, animated charts, recent loads and reminders.", tr: "Genel Bakış: sekiz gösterge, animasyonlu grafikler, son yükler ve hatırlatmalar." },
+    invoices: { en: "Invoices: open, overdue and collected amounts, average days to pay and the aging ring.", tr: "Faturalar: açık, gecikmede ve tahsil edilen tutarlar, ortalama ödeme süresi ve yaşlandırma halkası." },
+    compliance: { en: "Compliance: CDL, medical cards, registrations, insurance and filings with their expiry dates.", tr: "Belge takibi: CDL, sağlık kartı, ruhsat, sigorta ve beyannameler, bitiş tarihleriyle." },
+    ifta: { en: "IFTA: the quarterly fuel tax worksheet, by state, ready to copy into the return.", tr: "IFTA: eyalet eyalet, beyannameye aktarılmaya hazır çeyreklik yakıt vergisi tablosu." },
     trucks: { en: "Trucks: plate or unit #, US makes, odometer, owner and a service-due warning.", tr: "Tırlar: plaka veya araç kodu, ABD markaları, sayaç, tır sahibi ve bakım uyarısı." },
     loads: { en: "Loads: statement week, loaded/dead/total miles, gross, rate per mile and TONU.", tr: "Yükler: statement haftası, yüklü/boş/toplam mil, brüt, mil başına rate ve TONU." },
     drivers: { en: "Drivers: CDL, pay type and the unpaid balance from statements.", tr: "Sürücüler: ehliyet, ödeme şekli ve statement'lardan gelen ödenmemiş bakiye." },

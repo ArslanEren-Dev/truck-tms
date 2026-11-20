@@ -32,10 +32,10 @@ def truck_id(db):
 
 def test_report_totals(db, truck_id):
     r = build_truck_report(db, truck_id, "2026-03-01", "2026-03-31")
-    assert [l.load_number for l in r.loads] == ["#L1", "#L2"]  # cancelled and April excluded
-    assert r.total_revenue == 3000
+    assert [load.load_number for load in r.loads] == ["#L1", "#L2"]  # cancelled and April excluded
+    assert r.gross == 3000
     assert r.total_miles == 1000
-    assert r.revenue_per_mile == 3
+    assert r.rate_per_mile == 3
     assert r.total_expenses == 550
     assert r.net == 2450
     assert r.expenses_by_category == {"Fuel": 500, "Tolls": 50}

@@ -66,7 +66,8 @@ def make_xlsx(path: Path, rows: list[list]) -> Path:
                    '</Relationships>')
         z.writestr("xl/sharedStrings.xml",
                    f'<sst {ns}>' + "".join(f"<si><t>{s}</t></si>" for s in strings) + "</sst>")
-        z.writestr("xl/worksheets/sheet1.xml", f'<worksheet {ns}><sheetData>{"".join(cells_xml)}</sheetData></worksheet>')
+        sheet = f'<worksheet {ns}><sheetData>{"".join(cells_xml)}</sheetData></worksheet>'
+        z.writestr("xl/worksheets/sheet1.xml", sheet)
     return path
 
 
@@ -278,8 +279,9 @@ def test_load_dialog_rows_do_not_overlap(app, db, language):
         return w.mapTo(dialog, w.rect().topLeft()).y()
 
     assert bottom(dialog.notes) < top(dialog.documents_card)
+    assert bottom(dialog.notes) < top(dialog.states_card)
     cards = dialog.findChildren(Section)
-    assert len(cards) == 5
+    assert len(cards) == 6
     for card in cards:  # every field sits inside its own card
         for child in card.findChildren(QWidget):
             if child.isVisible() and child.parentWidget() is card:

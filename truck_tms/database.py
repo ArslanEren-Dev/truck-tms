@@ -12,12 +12,12 @@ import shutil
 import sqlite3
 import tempfile
 from dataclasses import dataclass, fields
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from .weeks import sqlite_week_expr, week_start
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 TRUCK_STATUSES = ("active", "maintenance", "inactive")
 DRIVER_STATUSES = ("active", "inactive")
@@ -55,6 +55,25 @@ STATEMENT_STATUSES = ("draft", "final", "paid")
 DOCUMENT_KINDS = ("rate_con", "bol", "pod", "invoice", "receipt", "other")
 ITEM_KINDS = ("driver_addition", "driver_deduction", "owner_addition", "owner_deduction")
 
+# Documents and filings that expire. Driver items belong to a driver, truck items to a truck,
+# company items to neither.
+DRIVER_COMPLIANCE = ("cdl", "medical_card", "drug_test", "mvr")
+TRUCK_COMPLIANCE = ("registration", "insurance", "annual_inspection", "permit")
+COMPANY_COMPLIANCE = ("ucr", "form_2290", "mcs150", "ifta_license", "other")
+COMPLIANCE_KINDS = DRIVER_COMPLIANCE + TRUCK_COMPLIANCE + COMPANY_COMPLIANCE
+
+# How a broker invoice gets paid: by the broker on its normal terms, early through the broker's
+# quick pay (for a fee), or through a factoring company (for a fee).
+INVOICE_METHODS = ("direct", "quick_pay", "factoring")
+
+# IFTA member jurisdictions: the 48 contiguous US states and 10 Canadian provinces.
+IFTA_JURISDICTIONS = (
+    "AL", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "ID", "IL", "IN", "IA", "KS", "KY", "LA",
+    "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND",
+    "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+    "AB", "BC", "MB", "NB", "NL", "NS", "ON", "PE", "QC", "SK",
+)
+
 # Common US truck makes and models (the make/model fields still accept any text).
 TRUCK_MAKES = {
     "Freightliner": ["Cascadia", "Columbia", "Coronado", "M2 106", "122SD"],
@@ -79,6 +98,9 @@ DEFAULT_SETTINGS = {
     "distance_unit": "mi",
     "week_start": "0",  # 0 = Monday … 6 = Sunday
     "dispatch_fee_percent": "0",
+    "invoice_prefix": "INV-",
+    "invoice_terms": "30",
+    "check_updates": "1",
 }
 
 TABLES = """
@@ -206,6 +228,43 @@ CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS compliance (
+    id          INTEGER PRIMARY KEY,
+    kind        TEXT NOT NULL,
+    expiry_date TEXT NOT NULL,
+    truck_id    INTEGER REFERENCES trucks(id) ON DELETE CASCADE,
+    driver_id   INTEGER REFERENCES drivers(id) ON DELETE CASCADE,
+    reference   TEXT,
+    notes       TEXT
+);
+
+CREATE TABLE IF NOT EXISTS invoices (
+    id             INTEGER PRIMARY KEY,
+    load_id        INTEGER UNIQUE REFERENCES loads(id) ON DELETE SET NULL,
+    invoice_number TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    issue_date     TEXT NOT NULL,
+    amount         REAL NOT NULL,
+    terms_days     INTEGER NOT NULL DEFAULT 30,
+    bill_to        TEXT,
+    method         TEXT NOT NULL DEFAULT 'direct',
+    fee            REAL,
+    paid_amount    REAL,
+    paid_date      TEXT,
+    notes          TEXT
+);
+
+CREATE TABLE IF NOT EXISTS load_states (
+    id      INTEGER PRIMARY KEY,
+    load_id INTEGER NOT NULL REFERENCES loads(id) ON DELETE CASCADE,
+    state   TEXT NOT NULL,
+    miles   REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ifta_rates (
+    state TEXT PRIMARY KEY,
+    rate  REAL NOT NULL
+);
 """
 
 INDEXES = """
@@ -215,6 +274,10 @@ CREATE INDEX IF NOT EXISTS idx_expenses_truck ON expenses(truck_id);
 CREATE INDEX IF NOT EXISTS idx_maintenance_truck ON maintenance(truck_id);
 CREATE INDEX IF NOT EXISTS idx_statements_truck ON statements(truck_id);
 CREATE INDEX IF NOT EXISTS idx_documents_load ON documents(load_id);
+CREATE INDEX IF NOT EXISTS idx_loads_date ON loads(COALESCE(delivery_date, pickup_date));
+CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
+CREATE INDEX IF NOT EXISTS idx_compliance_expiry ON compliance(expiry_date);
+CREATE INDEX IF NOT EXISTS idx_load_states_load ON load_states(load_id);
 """
 
 # Columns added after v0.1 — added with ALTER TABLE to databases created by older versions.
@@ -226,6 +289,10 @@ ADDED_COLUMNS = {
         "dead_miles": "REAL",
         "is_tonu": "INTEGER NOT NULL DEFAULT 0",
         "statement_week": "TEXT",
+    },
+    "expenses": {
+        "gallons": "REAL",
+        "state": "TEXT",
     },
 }
 
@@ -328,7 +395,68 @@ class Expense:
     category: str
     amount: float
     description: str | None = None
+    gallons: float | None = None  # fuel only: gallons bought (IFTA)
+    state: str | None = None      # fuel only: jurisdiction where it was bought (IFTA)
     id: int | None = None
+
+
+@dataclass
+class ComplianceItem:
+    """A document or filing that expires: a driver's CDL, a truck's registration, the company's UCR…"""
+
+    kind: str
+    expiry_date: str
+    truck_id: int | None = None
+    driver_id: int | None = None
+    reference: str | None = None  # number of the card / policy / permit
+    notes: str | None = None
+    id: int | None = None
+
+    @property
+    def scope(self) -> str:
+        if self.kind in DRIVER_COMPLIANCE:
+            return "driver"
+        return "truck" if self.kind in TRUCK_COMPLIANCE else "company"
+
+
+@dataclass
+class Invoice:
+    """A bill sent to a broker / customer for a load."""
+
+    invoice_number: str
+    issue_date: str
+    amount: float
+    load_id: int | None = None
+    terms_days: int = 30
+    bill_to: str | None = None
+    method: str = "direct"
+    fee: float | None = None          # quick pay / factoring fee kept by the payer
+    paid_amount: float | None = None  # money actually received
+    paid_date: str | None = None
+    notes: str | None = None
+    id: int | None = None
+
+    @property
+    def due_date(self) -> str:
+        return (date.fromisoformat(self.issue_date) + timedelta(days=self.terms_days or 0)).isoformat()
+
+    @property
+    def balance(self) -> float:
+        """What is still owed: the amount minus what was received and the fee that was kept."""
+        return round(self.amount - (self.paid_amount or 0) - (self.fee or 0), 2)
+
+    def status(self, today: date | None = None) -> str:
+        """``paid`` / ``partial`` / ``overdue`` / ``open``."""
+        if self.balance <= 0.005:
+            return "paid"
+        if self.due_date < (today or date.today()).isoformat():
+            return "overdue"
+        return "partial" if self.paid_amount else "open"
+
+    def days_overdue(self, today: date | None = None) -> int:
+        if self.balance <= 0.005:
+            return 0
+        return max(0, ((today or date.today()) - date.fromisoformat(self.due_date)).days)
 
 
 @dataclass
@@ -474,12 +602,28 @@ def _non_negative(obj, *names: str, integer: bool = False) -> None:
         setattr(obj, name, value)
 
 
+def _jurisdiction(value: str | None) -> str | None:
+    """'tx ' -> 'TX'; only IFTA jurisdictions are accepted."""
+    if value is None or not str(value).strip():
+        return None
+    code = str(value).strip().upper()
+    if code not in IFTA_JURISDICTIONS:
+        raise ValidationError("error.invalid_state")
+    return code
+
+
 def _columns(cls) -> list[str]:
     return [f.name for f in fields(cls) if f.name != "id"]
 
 
+_FIELD_NAMES: dict[type, tuple[str, ...]] = {}
+
+
 def _from_row(cls, row: sqlite3.Row):
-    obj = cls(**{f.name: row[f.name] for f in fields(cls)})
+    names = _FIELD_NAMES.get(cls)
+    if names is None:
+        names = _FIELD_NAMES[cls] = tuple(f.name for f in fields(cls))
+    obj = cls(**{name: row[name] for name in names})
     for flag in ("is_tonu", "deduct_driver_pay"):
         if hasattr(obj, flag):
             setattr(obj, flag, bool(getattr(obj, flag)))
@@ -491,6 +635,7 @@ class Database:
         if str(path) != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.path = str(path)
+        self._settings: dict[str, str] | None = None
         self.conn = sqlite3.connect(self.path)
         self.conn.row_factory = sqlite3.Row
         try:
@@ -880,6 +1025,7 @@ class Database:
         include_cancelled: bool = True,
         driver_id: int | None = None,
         week: str | None = None,
+        limit: int | None = None,
     ) -> list[Load]:
         """List loads.
 
@@ -921,6 +1067,9 @@ class Database:
         if where:
             sql += " WHERE " + " AND ".join(where)
         sql += f" ORDER BY {report_date} IS NULL, {report_date} DESC, id DESC"
+        if limit is not None:
+            sql += " LIMIT ?"
+            params.append(int(limit))
         return [_from_row(Load, r) for r in self.conn.execute(sql, params)]
 
     # ----------------------------------------------------------------- expenses
@@ -935,7 +1084,8 @@ class Database:
             raise ValidationError("error.invalid_category")
         if expense.amount is None:
             raise ValidationError("error.amount_required")
-        _non_negative(expense, "amount")
+        _non_negative(expense, "amount", "gallons")
+        expense.state = _jurisdiction(expense.state)
         return expense
 
     def add_expense(self, expense: Expense) -> int:
@@ -1101,10 +1251,13 @@ class Database:
 
     # ----------------------------------------------------------------- settings
     def get_settings(self) -> dict[str, str]:
-        settings = dict(DEFAULT_SETTINGS)
-        for row in self.conn.execute("SELECT key, value FROM settings"):
-            settings[row["key"]] = row["value"] if row["value"] is not None else ""
-        return settings
+        # read once and cached: list views ask for the currency / week start for every row
+        if self._settings is None:
+            settings = dict(DEFAULT_SETTINGS)
+            for row in self.conn.execute("SELECT key, value FROM settings"):
+                settings[row["key"]] = row["value"] if row["value"] is not None else ""
+            self._settings = settings
+        return dict(self._settings)
 
     def set_setting(self, key: str, value: str) -> None:
         with self.conn:
@@ -1113,3 +1266,168 @@ class Database:
                 " ON CONFLICT(key) DO UPDATE SET value = excluded.value",
                 (key, value),
             )
+        self._settings = None
+
+    # --------------------------------------------------------------- compliance
+    def _validate_compliance(self, item: ComplianceItem) -> ComplianceItem:
+        _clean_all(item)
+        if item.kind not in COMPLIANCE_KINDS:
+            raise ValidationError("error.invalid_kind")
+        if not item.expiry_date:
+            raise ValidationError("error.date_required")
+        _check_date(item.expiry_date)
+        if item.scope == "driver":
+            item.truck_id = None
+            if item.driver_id is None or self.get_driver(item.driver_id) is None:
+                raise ValidationError("error.driver_required")
+        elif item.scope == "truck":
+            item.driver_id = None
+            if item.truck_id is None or self.get_truck(item.truck_id) is None:
+                raise ValidationError("error.truck_required")
+        else:
+            item.truck_id = item.driver_id = None
+        return item
+
+    def add_compliance(self, item: ComplianceItem) -> int:
+        item = self._validate_compliance(item)
+        with self.conn:
+            item.id = self._insert("compliance", item)
+        return item.id
+
+    def update_compliance(self, item: ComplianceItem) -> None:
+        if item.id is None:
+            raise ValidationError("error.not_found")
+        item = self._validate_compliance(item)
+        with self.conn:
+            self._update("compliance", item)
+
+    def delete_compliance(self, item_id: int) -> None:
+        self._delete("compliance", item_id)
+
+    def get_compliance(self, item_id: int | None) -> ComplianceItem | None:
+        return self._get(ComplianceItem, "compliance", item_id)
+
+    def list_compliance(self) -> list[ComplianceItem]:
+        rows = self.conn.execute("SELECT * FROM compliance ORDER BY expiry_date, id")
+        return [_from_row(ComplianceItem, r) for r in rows]
+
+    # ----------------------------------------------------------------- invoices
+    def next_invoice_number(self) -> str:
+        """'INV-0001', 'INV-0002'… (the prefix is a setting); never reuses a number."""
+        prefix = self.get_settings().get("invoice_prefix") or ""
+        highest = 0
+        for (number,) in self.conn.execute("SELECT invoice_number FROM invoices"):
+            tail = number[len(prefix):] if prefix and number.upper().startswith(prefix.upper()) else number
+            if tail.isdigit():
+                highest = max(highest, int(tail))
+        return f"{prefix}{highest + 1:04d}"
+
+    def _validate_invoice(self, inv: Invoice) -> Invoice:
+        _clean_all(inv)
+        if not inv.invoice_number:
+            raise ValidationError("error.invoice_number_required")
+        if not inv.issue_date:
+            raise ValidationError("error.date_required")
+        _check_date(inv.issue_date)
+        _check_date(inv.paid_date)
+        if inv.amount is None:
+            raise ValidationError("error.amount_required")
+        if inv.method not in INVOICE_METHODS:
+            raise ValidationError("error.invalid_method")
+        _non_negative(inv, "amount", "fee", "paid_amount")
+        _non_negative(inv, "terms_days", integer=True)
+        inv.terms_days = inv.terms_days or 0
+        if inv.load_id is not None and self.get_load(inv.load_id) is None:
+            raise ValidationError("error.not_found")
+        clash = self.conn.execute(
+            "SELECT id, load_id, invoice_number FROM invoices WHERE (invoice_number = ? OR load_id = ?) AND id != ?",
+            (inv.invoice_number, inv.load_id, inv.id or -1),
+        ).fetchone()
+        if clash:
+            same_number = clash["invoice_number"].lower() == inv.invoice_number.lower()
+            raise ValidationError("error.invoice_number_exists" if same_number else "error.load_invoiced")
+        return inv
+
+    def _sync_load_status(self, inv: Invoice) -> None:
+        """An invoiced load becomes "invoiced", a fully paid one "paid"."""
+        if inv.load_id is None:
+            return
+        new = "paid" if inv.balance <= 0.005 else "invoiced"
+        self.conn.execute(
+            "UPDATE loads SET status = ? WHERE id = ? AND status NOT IN ('cancelled', ?)", (new, inv.load_id, new)
+        )
+
+    def add_invoice(self, inv: Invoice) -> int:
+        inv = self._validate_invoice(inv)
+        with self.conn:
+            inv.id = self._insert("invoices", inv)
+            self._sync_load_status(inv)
+        return inv.id
+
+    def update_invoice(self, inv: Invoice) -> None:
+        if inv.id is None:
+            raise ValidationError("error.not_found")
+        inv = self._validate_invoice(inv)
+        with self.conn:
+            self._update("invoices", inv)
+            self._sync_load_status(inv)
+
+    def delete_invoice(self, invoice_id: int) -> None:
+        self._delete("invoices", invoice_id)
+
+    def get_invoice(self, invoice_id: int | None) -> Invoice | None:
+        return self._get(Invoice, "invoices", invoice_id)
+
+    def invoice_for_load(self, load_id: int) -> Invoice | None:
+        row = self.conn.execute("SELECT * FROM invoices WHERE load_id = ?", (load_id,)).fetchone()
+        return _from_row(Invoice, row) if row else None
+
+    def list_invoices(self) -> list[Invoice]:
+        rows = self.conn.execute("SELECT * FROM invoices ORDER BY issue_date DESC, id DESC")
+        return [_from_row(Invoice, r) for r in rows]
+
+    # --------------------------------------------------------------------- IFTA
+    def set_load_states(self, load_id: int, states: list[tuple[str, float]]) -> None:
+        """Replace the miles-by-jurisdiction of a load: [('TX', 320), ('LA', 210)]. Rows of the same
+        state are added together; empty rows are skipped."""
+        merged: dict[str, float] = {}
+        for state, miles in states:
+            code = _jurisdiction(state)
+            if code is None or miles is None:
+                continue
+            miles = float(miles)
+            if miles < 0:
+                raise ValidationError("error.negative_number")
+            if miles:
+                merged[code] = merged.get(code, 0.0) + miles
+        with self.conn:
+            self.conn.execute("DELETE FROM load_states WHERE load_id = ?", (load_id,))
+            self.conn.executemany("INSERT INTO load_states (load_id, state, miles) VALUES (?, ?, ?)",
+                                  [(load_id, s, m) for s, m in merged.items()])
+
+    def load_states(self, load_id: int) -> list[tuple[str, float]]:
+        rows = self.conn.execute("SELECT state, miles FROM load_states WHERE load_id = ? ORDER BY id", (load_id,))
+        return [(r["state"], r["miles"]) for r in rows]
+
+    def state_miles_by_load(self) -> dict[int, list[tuple[str, float]]]:
+        result: dict[int, list[tuple[str, float]]] = {}
+        for r in self.conn.execute("SELECT load_id, state, miles FROM load_states ORDER BY id"):
+            result.setdefault(r["load_id"], []).append((r["state"], r["miles"]))
+        return result
+
+    def ifta_rates(self) -> dict[str, float]:
+        return {r["state"]: r["rate"] for r in self.conn.execute("SELECT state, rate FROM ifta_rates")}
+
+    def set_ifta_rates(self, rates: dict[str, float | None]) -> None:
+        """Save tax rates per gallon; ``None`` removes a rate."""
+        with self.conn:
+            for state, rate in rates.items():
+                code = _jurisdiction(state)
+                if rate is None:
+                    self.conn.execute("DELETE FROM ifta_rates WHERE state = ?", (code,))
+                    continue
+                if float(rate) < 0:
+                    raise ValidationError("error.negative_number")
+                self.conn.execute(
+                    "INSERT INTO ifta_rates (state, rate) VALUES (?, ?)"
+                    " ON CONFLICT(state) DO UPDATE SET rate = excluded.rate", (code, float(rate)))

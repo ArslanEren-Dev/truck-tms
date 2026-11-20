@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QDate
-from PySide6.QtWidgets import QDialog, QLabel, QLineEdit, QPlainTextEdit, QWidget
+from PySide6.QtWidgets import QDialog, QLineEdit, QPlainTextEdit, QWidget
 
 from ..database import SERVICE_TYPES, Database, Maintenance, ValidationError
 from ..i18n import t
-from ..report import money
+from ..printout import money
 from .base import CrudTab
 from .dialog_kit import DialogPage
 from .widgets import (
@@ -107,10 +107,7 @@ class MaintenanceTab(CrudTab):
 
     def __init__(self, db: Database, parent: QWidget | None = None):
         super().__init__(db, parent)
-        self.truck_filter = truck_combo(db, include_all=True)
-        self.truck_filter.currentIndexChanged.connect(self.refresh)
-        self.add_filter(QLabel(t("truck")))
-        self.add_filter(self.truck_filter)
+        self.truck_filter = self.add_truck_filter()
         self.refresh()
 
     def headers(self) -> list[str]:

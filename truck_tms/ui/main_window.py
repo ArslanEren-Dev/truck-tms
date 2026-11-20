@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import os
 from datetime import date, datetime
 from pathlib import Path
-from typing import Callable
+from collections.abc import Callable
 
 from PySide6.QtCore import QTimer, QUrl
 from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
@@ -13,9 +14,13 @@ from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QPushButton
 from .. import PROJECT_URL, WEBSITE_URL, __version__
 from ..database import Database, ValidationError, backups_folder
 from ..i18n import set_language, t
+from ..updates import Release, check_due, is_newer
+from .compliance_tab import ComplianceTab
 from .dashboard import OverviewTab
 from .drivers import DriversTab
 from .expenses import ExpensesTab
+from .ifta_tab import IftaTab
+from .invoices import InvoicesTab
 from .loads import LoadsTab
 from .maintenance import MaintenanceTab
 from .nav import NavTabs
@@ -25,7 +30,8 @@ from .statements import StatementsTab
 from .theme import apply_qt_language, apply_theme, icon, nav_icon
 from .toast import show_toast
 from .trucks import TrucksTab
-from .widgets import show_error, show_info
+from .update_check import UpdateChecker
+from .widgets import confirm_action, show_error, show_info
 
 DB_FILTER_KEY = "file.filter"
 
@@ -34,18 +40,27 @@ class MainWindow(QMainWindow):
     """``on_file_changed(path)`` is called when the user opens or creates another data file,
     so the app can reopen it next time."""
 
-    def __init__(self, db: Database, on_file_changed: Callable[[str], None] | None = None):
+    def __init__(self, db: Database, on_file_changed: Callable[[str], None] | None = None,
+                 check_updates: bool = False):
         super().__init__()
         self.setObjectName("MainWindow")  # toasts look for this window
         self.db = db
         self.on_file_changed = on_file_changed
         self._last_changes = db.change_count
-        self.resize(1320, 780)
+        self.release: Release | None = None  # a newer version found on GitHub
+        self._manual_check = False
+        self.updates = UpdateChecker(self)
+        self.updates.finished.connect(self._update_checked)
+        self.resize(1360, 800)
         self.saved_timer = QTimer(self)
         self.saved_timer.setInterval(700)
         self.saved_timer.timeout.connect(self._check_saved)
         self.saved_timer.start()
         self.build()
+        settings = db.get_settings()
+        if (check_updates and settings["check_updates"] == "1" and check_due(settings.get("update_checked"))
+                and not os.environ.get("TRUCK_TMS_NO_UPDATE_CHECK")):
+            QTimer.singleShot(2500, self.updates.start)  # after the window is up
 
     # ------------------------------------------------------------------ build
     def build(self, select_index: int = 0) -> None:
@@ -65,9 +80,12 @@ class MainWindow(QMainWindow):
             (TrucksTab(self.db), "tab.trucks", "truck"),
             (DriversTab(self.db), "tab.drivers", "user"),
             (LoadsTab(self.db), "tab.loads", "layers"),
+            (InvoicesTab(self.db), "tab.invoices", "receipt"),
             (StatementsTab(self.db), "tab.statements", "file"),
             (MaintenanceTab(self.db), "tab.maintenance", "wrench"),
             (ExpensesTab(self.db), "tab.expenses", "wallet"),
+            (ComplianceTab(self.db), "tab.compliance", "shield"),
+            (IftaTab(self.db), "tab.ifta", "map"),
             (ReportsTab(self.db), "tab.reports", "chart"),
         ]
         settings_tab = SettingsTab(self.db)
@@ -79,6 +97,11 @@ class MainWindow(QMainWindow):
         for page, key, icon_name in pages:
             self.tabs.addTab(page, t(key), icon_name, t("page." + key.split(".")[1]))
 
+        self.update_btn = QPushButton(t("nav.update"))
+        self.update_btn.setIcon(nav_icon("bell"))
+        self.update_btn.clicked.connect(self.open_release)
+        self.tabs.add_footer_button(self.update_btn)
+        self.update_btn.setVisible(self.release is not None)
         dark = settings["theme"] == "dark"
         self.theme_btn = QPushButton(t("nav.light_mode" if dark else "nav.dark_mode"))
         self.theme_btn.setIcon(nav_icon("sun" if dark else "moon"))
@@ -100,7 +123,11 @@ class MainWindow(QMainWindow):
     def quick_action(self, action: str) -> None:
         """Buttons on the overview page: jump to the right page and open its "new" dialog."""
         target = {"new_load": LoadsTab, "new_truck": TrucksTab, "new_driver": DriversTab,
-                  "new_statement": StatementsTab}[action]
+                  "new_statement": StatementsTab, "new_invoice": InvoicesTab,
+                  "compliance": ComplianceTab}[action]
+        if action == "compliance":  # a reminder was clicked: just show the list
+            self.tabs.setCurrentIndex(self.page_index(target))
+            return
         index = self.page_index(target)
         self.tabs.setCurrentIndex(index)
         self.tabs.widget(index)._open(None)
@@ -135,6 +162,7 @@ class MainWindow(QMainWindow):
         self._action(help_menu, t("menu.github"), lambda: self.open_url(PROJECT_URL), None, "folder")
         self._action(help_menu, t("menu.report_issue"), lambda: self.open_url(PROJECT_URL + "/issues"), None, "edit")
         help_menu.addSeparator()
+        self._action(help_menu, t("menu.check_updates"), self.check_for_updates, None, "bell")
         self._action(help_menu, t("menu.about"), self.show_about)
 
     def _action(self, menu, text, slot, shortcut=None, icon_name=None) -> QAction:
@@ -236,6 +264,35 @@ class MainWindow(QMainWindow):
     @staticmethod
     def open_url(url: str) -> None:
         QDesktopServices.openUrl(QUrl(url))
+
+    # ---------------------------------------------------------------- updates
+    def check_for_updates(self) -> None:
+        """Help → Check for updates: same check, but always says what it found."""
+        self._manual_check = True
+        self.updates.start()
+
+    def _update_checked(self, release: Release | None) -> None:
+        manual, self._manual_check = self._manual_check, False
+        if release is not None:
+            self.db.set_setting("update_checked", date.today().isoformat())
+        if release is not None and is_newer(release.version):
+            self.release = release
+            self.update_btn.setVisible(True)
+            show_toast(t("update.available", version=release.version), "info",
+                       (t("update.download"), self.open_release), 10000)
+            if manual:
+                self.open_release_question()
+        elif manual:
+            show_info(self, t("update.latest", version=__version__) if release else t("update.failed"))
+
+    def open_release_question(self) -> None:
+        if self.release and confirm_action(self, t("update.question", version=self.release.version,
+                                                    current=__version__), t("update.download")):
+            self.open_release()
+
+    def open_release(self) -> None:
+        if self.release:
+            self.open_url(self.release.url)
 
     def show_about(self) -> None:
         backups = str(backups_folder(self.db.path)) if self.db.path != ":memory:" else "—"

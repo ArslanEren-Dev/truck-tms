@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFormLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPlainTextEdit,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -46,6 +48,12 @@ class SettingsTab(QWidget):
         for i in range(7):
             self.week_start.addItem(t(f"weekday.{i}"), str(i))
         self.dispatch_fee = NumberEdit()
+        self.invoice_prefix = QLineEdit()
+        self.invoice_prefix.setMaxLength(12)
+        self.invoice_terms = QSpinBox()
+        self.invoice_terms.setRange(0, 365)
+        self.invoice_terms.setSuffix(" " + t("inv.days"))
+        self.check_updates = QCheckBox(t("settings.check_updates_hint"))
         db_path = QLabel(db.path)
         db_path.setProperty("role", "hint")
         db_path.setWordWrap(True)
@@ -61,6 +69,9 @@ class SettingsTab(QWidget):
         form.addRow(t("settings.distance_unit"), self.distance_unit)
         form.addRow(t("settings.week_start"), self.week_start)
         form.addRow(t("settings.dispatch_fee"), self.dispatch_fee)
+        form.addRow(t("settings.invoice_prefix"), self.invoice_prefix)
+        form.addRow(t("settings.invoice_terms"), self.invoice_terms)
+        form.addRow(t("settings.check_updates"), self.check_updates)
         form.addRow(t("settings.database"), db_path)
 
         save = button(t("btn.save"), "primary", "save")
@@ -97,6 +108,12 @@ class SettingsTab(QWidget):
             self.dispatch_fee.setValue(float(s["dispatch_fee_percent"] or 0))
         except ValueError:
             self.dispatch_fee.setValue(0)
+        self.invoice_prefix.setText(s["invoice_prefix"])
+        try:
+            self.invoice_terms.setValue(int(s["invoice_terms"] or 0))
+        except ValueError:
+            self.invoice_terms.setValue(30)
+        self.check_updates.setChecked(s["check_updates"] == "1")
 
     def save(self) -> None:
         try:
@@ -117,6 +134,9 @@ class SettingsTab(QWidget):
         self.db.set_setting("distance_unit", self.distance_unit.currentData())
         self.db.set_setting("week_start", self.week_start.currentData())
         self.db.set_setting("dispatch_fee_percent", format_number(fee))
+        self.db.set_setting("invoice_prefix", self.invoice_prefix.text().strip())
+        self.db.set_setting("invoice_terms", str(self.invoice_terms.value()))
+        self.db.set_setting("check_updates", "1" if self.check_updates.isChecked() else "0")
         if new_language != old["language"] or new_theme != old["theme"]:
             self.appearance_changed.emit()
         else:

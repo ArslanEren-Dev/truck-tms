@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 from PySide6.QtCore import (
@@ -46,6 +46,7 @@ TOKENS = {
         "success_bg": "#E6F4EA", "success_fg": "#1E7B34", "warning_bg": "#FFF3DF", "warning_fg": "#9A5A00",
         "danger_bg": "#FDECEC", "danger_fg": "#C62828", "info_bg": "#E3EEFC", "info_fg": "#1E63C6",
         "neutral_bg": "#EEF1F5", "neutral_fg": "#5F6B7A",
+        "accent2": "#5B9BF0", "series": "#1E63C6,#F5A623,#E8743B,#D63A3A,#8E1E1E,#7C5CC4",
     },
     "dark": {
         "bg": "#121417", "surface": "#181C21", "surface2": "#20252C", "border": "#2E353E",
@@ -58,6 +59,7 @@ TOKENS = {
         "success_bg": "#163322", "success_fg": "#6BD08A", "warning_bg": "#3A2B12", "warning_fg": "#F2B45A",
         "danger_bg": "#3A1F22", "danger_fg": "#FF8A80", "info_bg": "#172B4D", "info_fg": "#7DB0FF",
         "neutral_bg": "#262C34", "neutral_fg": "#A3ADB9",
+        "accent2": "#7DB0FF", "series": "#3B82F6,#F2B45A,#F08A55,#EF5350,#C2414B,#A78BFA",
     },
 }
 
@@ -110,6 +112,7 @@ def _palette(theme: str) -> QPalette:
 def stylesheet(theme: str) -> str:
     t = dict(TOKENS[theme])
     t["chevron"] = asset_path(f"chevron_{theme}.svg").as_posix()
+    t["chevron_up"] = asset_path(f"chevron_up_{theme}.svg").as_posix()
     qss = """
 QMainWindow, QDialog { background: @bg; }
 QWidget { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-size: 10pt; }
@@ -139,6 +142,16 @@ QLineEdit:disabled, QComboBox:disabled, QDateEdit:disabled { color: @muted; back
 QComboBox::drop-down, QDateEdit::drop-down { border: none; width: 24px;
     subcontrol-origin: padding; subcontrol-position: center right; }
 QComboBox::down-arrow, QDateEdit::down-arrow { image: url("@chevron"); width: 12px; height: 12px; }
+QSpinBox { padding-right: 24px; }
+QSpinBox:focus { border: 1px solid @accent; }
+QSpinBox:hover { border-color: @muted; }
+QSpinBox::up-button, QSpinBox::down-button { subcontrol-origin: border; width: 22px; border: none;
+    background: transparent; margin: 2px 2px 2px 0; border-radius: 4px; }
+QSpinBox::up-button { subcontrol-position: top right; }
+QSpinBox::down-button { subcontrol-position: bottom right; }
+QSpinBox::up-button:hover, QSpinBox::down-button:hover { background: @surface2; }
+QSpinBox::up-arrow { image: url("@chevron_up"); width: 10px; height: 10px; }
+QSpinBox::down-arrow { image: url("@chevron"); width: 10px; height: 10px; }
 QComboBox QAbstractItemView { background: @input; color: @text; border: 1px solid @border;
     selection-background-color: @select; selection-color: @select_text; outline: 0; padding: 4px; }
 QTableView { background: @bg; alternate-background-color: @alt; gridline-color: @border;
@@ -274,6 +287,10 @@ def apply_qt_language(code: str) -> None:
 
 # -------------------------------------------------------------------------- icons
 ICON_PATHS = {
+    "shield": "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4",
+    "receipt": "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h4",
+    "map": "M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15",
+    "bell": "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4",
     "plus": "M12 5v14M5 12h14",
     "edit": "M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4",
     "trash": "M4 7h16M10 11v6M14 11v6M9 7V4h6v3M6 7l1 13h10l1-13",
@@ -317,7 +334,7 @@ def nav_icon(name: str) -> QIcon:
     return result
 
 
-@lru_cache(maxsize=None)
+@cache
 def icon(name: str, color: str | None = None) -> QIcon:
     """Line icon drawn from an inline SVG path, coloured for the current theme."""
     color = color or token("text")
@@ -341,7 +358,7 @@ def style_button(button: QPushButton, variant: str | None = None, icon_name: str
     if variant:
         button.setProperty("variant", variant)
     if icon_name:
-        color = {"primary": token("accent_text"), "danger": token("danger")}.get(variant or "", None)
+        color = {"primary": token("accent_text"), "danger": token("danger")}.get(variant or "")
         button.setIcon(icon(icon_name, color))
         button.setIconSize(QSize(16, 16))
     button.setCursor(Qt.CursorShape.PointingHandCursor)
