@@ -8,11 +8,11 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.5.0-1E63C6" alt="version">
+  <a href="https://github.com/ArslanEren-Dev/truck-tms/releases/latest"><img src="https://img.shields.io/github/v/release/ArslanEren-Dev/truck-tms?label=version&color=1E63C6" alt="version"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB" alt="python">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-555" alt="platform">
   <img src="https://img.shields.io/badge/language-English%20%7C%20T%C3%BCrk%C3%A7e-1E63C6" alt="languages">
-  <img src="https://img.shields.io/badge/license-MIT-F5A623" alt="license">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-F5A623" alt="license"></a>
 </p>
 
 <p align="center">
