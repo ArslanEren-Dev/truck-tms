@@ -59,7 +59,7 @@ def test_statement_totals(db, setup):
     s = make_statement(db, truck)
     summary = compute_statement(db, db.get_statement(s.id))
 
-    assert [l.load_number for l in summary.loads] == ["#1", "#3", "#2", "#6"]
+    assert [load.load_number for load in summary.loads] == ["#1", "#3", "#2", "#6"]
     assert summary.gross == 2100 + 300 + 1000 + 500 == 3900
     assert summary.loaded_miles == 1300
     assert summary.dead_miles == 100

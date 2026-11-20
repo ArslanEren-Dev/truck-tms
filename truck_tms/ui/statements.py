@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 
 from ..database import ITEM_KINDS, STATEMENT_STATUSES, Database, Statement, StatementItem, ValidationError
 from ..i18n import t
-from ..report import money, number
+from ..printout import money, number
 from ..statement import StatementSummary, compute_statement, percent
 from ..weeks import week_label, week_start
 from .base import CrudTab
@@ -38,11 +38,9 @@ from .widgets import (
     choice_combo,
     date_edit,
     fill_table,
-    fill_truck_combo,
     hint_label,
     make_table,
     parse_number,
-    selected_id,
     set_combo_data,
     show_error,
     status_badge,
@@ -337,7 +335,8 @@ class StatementDialog(QDialog):
             (t("stmt.total_weekly_miles"), f"{number(s.total_miles)} {self.unit}", True),
             (t("stmt.total_gross"), money(s.gross, c), True),
             (t("load.rate_per_mile", unit=self.unit), money(s.rate_per_mile, c), False),
-            ("− " + t("stmt.dispatch_fee") + (f" ({percent(st.dispatch_fee_percent)})" if st.dispatch_fee_percent else ""),
+            ("− " + t("stmt.dispatch_fee")
+             + (f" ({percent(st.dispatch_fee_percent)})" if st.dispatch_fee_percent else ""),
              money(s.dispatch_fee, c), False),
             ("− " + t("stmt.fuel") + (f" ({st.fuel_gallons:,.1f} {t('unit.gal')})" if st.fuel_gallons else ""),
              money(s.fuel, c), False),
@@ -365,7 +364,8 @@ class StatementDialog(QDialog):
             warn = (f"<p style='color:#c00'><b>⚠ {escape(t('stmt.driver_balance'))}: "
                     f"{money(s.driver_balance, c)}</b></p>")
         self.payout_value.setText(money(s.owner_payout, c))
-        self.payout_sub.setText(t("stmt.payout_sub", gross=money(s.gross, c), miles=f"{number(s.total_miles)} {self.unit}",
+        self.payout_sub.setText(t("stmt.payout_sub", gross=money(s.gross, c),
+                                  miles=f"{number(s.total_miles)} {self.unit}",
                                   net=money(s.driver_net, c)))
         self.page.header.set_subtitle(f"{s.truck.label} · {week_label(s.week_start)}")
         self.preview.setHtml(
@@ -398,13 +398,8 @@ class StatementsTab(CrudTab):
 
     def __init__(self, db: Database, parent: QWidget | None = None):
         super().__init__(db, parent)
-        self.export_btn = button(t("btn.export"), None, "export")
-        self.export_btn.clicked.connect(self._export_selected)
-        self.toolbar.insertWidget(3, self.export_btn)
-        self.truck_filter = truck_combo(db, include_all=True)
-        self.truck_filter.currentIndexChanged.connect(self.refresh)
-        self.add_filter(QLabel(t("truck")))
-        self.add_filter(self.truck_filter)
+        self.export_btn = self.add_tool(t("btn.export"), "export", self._export_selected)
+        self.truck_filter = self.add_truck_filter()
         self.refresh()
 
     def headers(self) -> list[str]:
@@ -412,10 +407,6 @@ class StatementsTab(CrudTab):
                 t("stmt.total_gross"), t("stmt.dispatch_fee"), t("stmt.fuel"), t("stmt.tolls"),
                 t("stmt.driver_net"), t("stmt.driver_paid"), t("stmt.driver_paid_date"),
                 t("stmt.driver_balance"), t("stmt.owner_payout"), t("stmt.status")]
-
-    def refresh(self) -> None:
-        fill_truck_combo(self.truck_filter, self.db, include_all=True)
-        super().refresh()
 
     def rows(self):
         st = self.db.get_settings()
@@ -449,8 +440,6 @@ class StatementsTab(CrudTab):
         self.db.delete_statement(record_id)
 
     def _export_selected(self) -> None:
-        record_id = selected_id(self.table)
-        if record_id is None:
-            show_error(self, "select_row")
-            return
-        export_statement(self, self.db, compute_statement(self.db, self.db.get_statement(record_id)))
+        record_id = self.selected_or_warn()
+        if record_id is not None:
+            export_statement(self, self.db, compute_statement(self.db, self.db.get_statement(record_id)))

@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QDialog, QLineEdit, QPlainTextEdit, QWidget
 
 from ..database import DRIVER_STATUSES, PAY_TYPES, Database, Driver, ValidationError
 from ..i18n import t
-from ..report import money
+from ..printout import money
 from ..statement import driver_balances, percent
 from .base import CrudTab
 from .dialog_kit import DialogPage
@@ -19,7 +19,6 @@ from .widgets import (
     confirm,
     hint_label,
     set_combo_data,
-    search_box,
     show_error,
     status_badge,
 )
@@ -115,9 +114,7 @@ class DriversTab(CrudTab):
 
     def __init__(self, db: Database, parent: QWidget | None = None):
         super().__init__(db, parent)
-        self.search = search_box()
-        self.search.textChanged.connect(self.refresh)
-        self.add_filter(self.search)
+        self.search = self.add_search()
         self.refresh()
 
     def headers(self) -> list[str]:

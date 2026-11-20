@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QDate, QRectF, Qt, Signal
+from PySide6.QtCore import QDate, QEvent, QObject, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -57,6 +57,16 @@ def confirm(parent: QWidget, text: str) -> bool:
     style_button(box.button(QMessageBox.StandardButton.Yes), "danger").setText(t("btn.yes"))
     style_button(box.button(QMessageBox.StandardButton.No)).setText(t("btn.no"))
     box.setDefaultButton(QMessageBox.StandardButton.No)
+    return box.exec() == QMessageBox.StandardButton.Yes
+
+
+def confirm_action(parent: QWidget, text: str, yes_text: str) -> bool:
+    """A friendly question (not a warning): the main button says what will happen."""
+    box = QMessageBox(QMessageBox.Icon.Question, t("info.title"), text,
+                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, parent)
+    style_button(box.button(QMessageBox.StandardButton.Yes), "primary").setText(yes_text)
+    style_button(box.button(QMessageBox.StandardButton.No)).setText(t("btn.cancel"))
+    box.setDefaultButton(QMessageBox.StandardButton.Yes)
     return box.exec() == QMessageBox.StandardButton.Yes
 
 
@@ -221,6 +231,8 @@ STATUS_TONES = {
     "planned": "neutral", "dispatched": "info", "in_transit": "info", "delivered": "success",
     "invoiced": "warning", "paid": "success", "cancelled": "danger",
     "draft": "neutral", "final": "info", "tonu": "warning", "due": "danger",
+    "open": "info", "partial": "warning", "overdue": "danger",
+    "expired": "danger", "soon": "warning", "ok": "success",
 }
 
 
@@ -238,8 +250,40 @@ def status_badge(prefix: str, value: str) -> Badge:
     return Badge(t(prefix + value), STATUS_TONES.get(value, "neutral"))
 
 
+class RowHover(QObject):
+    """Remembers which table row is under the mouse so the delegate can tint the whole row."""
+
+    def __init__(self, table: QTableWidget):
+        super().__init__(table)
+        self.table = table
+        self.row = -1
+        table.viewport().setMouseTracking(True)
+        table.viewport().installEventFilter(self)
+
+    def eventFilter(self, obj, event):  # noqa: N802 (Qt API)
+        kind = event.type()
+        if kind == QEvent.Type.MouseMove:
+            self._set(self.table.rowAt(int(event.position().y())))
+        elif kind in (QEvent.Type.Leave, QEvent.Type.Hide):
+            self._set(-1)
+        return False
+
+    def _set(self, row: int) -> None:
+        if row != self.row:
+            self.row = row
+            self.table.viewport().update()
+
+
 class BadgeDelegate(QStyledItemDelegate):
+    def __init__(self, table: QTableWidget):
+        super().__init__(table)
+        self.hover = RowHover(table)
+
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index) -> None:
+        if index.row() == self.hover.row and not option.state & QStyle.StateFlag.State_Selected:
+            tint = QColor(token("accent"))
+            tint.setAlpha(20)
+            painter.fillRect(option.rect, tint)
         tone = index.data(BADGE_ROLE)
         if not tone:
             super().paint(painter, option, index)
@@ -297,15 +341,21 @@ def make_table(headers: list[str]) -> QTableWidget:
     table.verticalHeader().setVisible(False)
     table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
     table.horizontalHeader().setStretchLastSection(True)
+    # size columns from the first rows only: measuring thousands of rows made big lists slow
+    table.horizontalHeader().setResizeContentsPrecision(150)
     table.setSortingEnabled(True)
     # keep the database order until the user clicks a column header
     table.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
     return table
 
 
+_NUMBER_ALIGN = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter  # built once, not per cell
+
+
 def fill_table(table: QTableWidget, rows: list[tuple[int, list]]) -> None:
     """``rows`` = [(record_id, [cell, ...]), ...]; a cell is text, (text, sort_key),
     (text, sort_key, QColor) for coloured text, or a ``Badge``."""
+    table.setUpdatesEnabled(False)  # one repaint at the end instead of one per cell
     table.setSortingEnabled(False)
     table.setRowCount(len(rows))
     for r, (record_id, cells) in enumerate(rows):
@@ -327,10 +377,11 @@ def fill_table(table: QTableWidget, rows: list[tuple[int, list]]) -> None:
             if c == 0:
                 item.setData(Qt.ItemDataRole.UserRole, record_id)
             if isinstance(key, (int, float)):
-                item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                item.setTextAlignment(_NUMBER_ALIGN)
             table.setItem(r, c, item)
     table.setSortingEnabled(True)
     table.resizeColumnsToContents()
+    table.setUpdatesEnabled(True)
 
 
 def selected_id(table: QTableWidget) -> int | None:

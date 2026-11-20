@@ -9,15 +9,15 @@ import csv
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
-from html import escape
 from pathlib import Path
 
 from .database import Database, Expense, Load, Maintenance, Truck, ValidationError
 from .i18n import t
+from .printout import HEAD, TABLE, LoadTotals, company_html, esc, facts_html, money, number, page, vehicle_text
 
 
 @dataclass
-class TruckReport:
+class TruckReport(LoadTotals):
     truck: Truck
     start: str
     end: str
@@ -25,25 +25,6 @@ class TruckReport:
     expenses: list[Expense] = field(default_factory=list)
     maintenance: list[Maintenance] = field(default_factory=list)
 
-    @property
-    def total_revenue(self) -> float:
-        return sum(load.gross for load in self.loads)
-
-    @property
-    def loaded_miles(self) -> float:
-        return sum(load.loaded_miles or 0 for load in self.loads)
-
-    @property
-    def dead_miles(self) -> float:
-        return sum(load.dead_miles or 0 for load in self.loads)
-
-    @property
-    def total_miles(self) -> float:
-        return self.loaded_miles + self.dead_miles
-
-    @property
-    def revenue_per_mile(self) -> float | None:
-        return self.total_revenue / self.total_miles if self.total_miles else None
 
     @property
     def maintenance_cost(self) -> float:
@@ -55,7 +36,7 @@ class TruckReport:
 
     @property
     def net(self) -> float:
-        return self.total_revenue - self.total_expenses
+        return self.gross - self.total_expenses
 
     @property
     def expenses_by_category(self) -> dict[str, float]:
@@ -83,30 +64,12 @@ def build_truck_report(db: Database, truck_id: int, start: str, end: str) -> Tru
     return TruckReport(truck, start, end, loads, expenses, maintenance)
 
 
-def money(value: float | None, currency: str) -> str:
-    if value is None:
-        return "—"
-    sign = "-" if value < 0 else ""
-    return f"{sign}{currency}{abs(value):,.2f}"
-
-
-def number(value: float | None, decimals: int = 0) -> str:
-    if value is None:
-        return "—"
-    return f"{value:,.{decimals}f}"
-
-
-def _e(value) -> str:
-    return escape("" if value is None else str(value))
-
-
-TABLE = "border='1' cellspacing='0' cellpadding='4' width='100%' style='border-collapse:collapse'"
 HALF = TABLE.replace("width='100%'", "width='50%'")
-HEAD = "style='background-color:#e8eef5'"
+
 
 
 def _table(headers: list[str], rows: list[list[str]], numeric: set[int]) -> str:
-    head = "".join(f"<th>{_e(h)}</th>" for h in headers)
+    head = "".join(f"<th>{esc(h)}</th>" for h in headers)
     body = "".join(
         "<tr>" + "".join(
             f"<td{' align=right' if i in numeric else ''}>{c}</td>" for i, c in enumerate(row)
@@ -120,60 +83,52 @@ def report_to_html(report: TruckReport, settings: dict[str, str]) -> str:
     cur = settings.get("currency", "$")
     unit = settings.get("distance_unit", "mi")
     truck = report.truck
-    vehicle = " ".join(str(p) for p in (truck.year, truck.make, truck.model) if p)
 
-    company = ""
-    if settings.get("company_name"):
-        company += f"<div style='font-size:16pt; font-weight:bold'>{_e(settings['company_name'])}</div>"
-    if settings.get("company_address"):
-        company += f"<div style='color:#555'>{_e(settings['company_address']).replace(chr(10), '<br>')}</div>"
 
     info_rows = [
         (t("truck.plate"), truck.plate),
         (t("truck.unit_number"), truck.unit_number),
-        (t("truck.vehicle"), vehicle),
+        (t("truck.vehicle"), vehicle_text(truck)),
         (t("truck.vin"), truck.vin),
         (t("truck.odometer"), f"{truck.odometer:,} {unit}" if truck.odometer else None),
         (t("truck.owner_name"), truck.owner_name),
         (t("report.period"), f"{report.start} — {report.end}"),
     ]
-    info = "".join(
-        f"<tr><td style='color:#555; padding-right:16px'>{_e(k)}</td><td><b>{_e(v)}</b></td></tr>"
-        for k, v in info_rows if v
-    )
+
 
     summary_rows = [
         (t("report.load_count"), str(len(report.loads))),
         (t("load.loaded_miles"), f"{number(report.loaded_miles)} {unit}"),
         (t("load.dead_miles"), f"{number(report.dead_miles)} {unit}"),
         (t("report.total_distance"), f"{number(report.total_miles)} {unit}"),
-        (t("report.revenue"), money(report.total_revenue, cur)),
-        (t("load.rate_per_mile", unit=unit), money(report.revenue_per_mile, cur)),
+        (t("report.revenue"), money(report.gross, cur)),
+        (t("load.rate_per_mile", unit=unit), money(report.rate_per_mile, cur)),
         (t("report.expenses"), money(report.total_expenses, cur)),
         (t("report.net"), money(report.net, cur)),
     ]
     summary = "".join(
-        f"<tr><td>{_e(k)}</td><td align='right'>{'<b>' + _e(v) + '</b>' if k == t('report.net') else _e(v)}</td></tr>"
+        f"<tr><td>{esc(k)}</td><td align='right'>"
+        f"{'<b>' + esc(v) + '</b>' if k == t('report.net') else esc(v)}</td></tr>"
         for k, v in summary_rows
     )
 
     if report.loads:
         rows = [
             [
-                _e(load.report_date or "—"),
-                _e(load.load_number or "—") + (f" <b>[{_e(t('load.tonu'))}]</b>" if load.is_tonu else ""),
-                _e(load.broker or "—"),
-                f"{_e(load.pickup_location or '?')} → {_e(load.delivery_location or '?')}",
+                esc(load.report_date or "—"),
+                esc(load.load_number or "—") + (f" <b>[{esc(t('load.tonu'))}]</b>" if load.is_tonu else ""),
+                esc(load.broker or "—"),
+                f"{esc(load.pickup_location or '?')} → {esc(load.delivery_location or '?')}",
                 number(load.loaded_miles or 0),
                 number(load.dead_miles or 0),
                 money(load.gross, cur),
-                _e(t("status." + load.status)),
+                esc(t("status." + load.status)),
             ]
             for load in report.loads
         ]
-        rows.append([f"<b>{_e(t('report.total'))}</b>", "", "", "",
+        rows.append([f"<b>{esc(t('report.total'))}</b>", "", "", "",
                      f"<b>{number(report.loaded_miles)}</b>", f"<b>{number(report.dead_miles)}</b>",
-                     f"<b>{money(report.total_revenue, cur)}</b>", ""])
+                     f"<b>{money(report.gross, cur)}</b>", ""])
         loads_html = _table(
             [t("report.date"), t("load.load_number"), t("load.broker"), t("report.route"),
              f"{t('load.loaded_miles')} ({unit})", f"{t('load.dead_miles')} ({unit})",
@@ -181,46 +136,40 @@ def report_to_html(report: TruckReport, settings: dict[str, str]) -> str:
             rows, {4, 5, 6},
         )
     else:
-        loads_html = f"<p style='color:#777'>{_e(t('report.no_loads'))}</p>"
+        loads_html = f"<p style='color:#777'>{esc(t('report.no_loads'))}</p>"
 
     cost_rows = [
-        [_e(e.date), _e(t("category." + e.category)), _e(e.description or ""), money(e.amount, cur)]
+        [esc(e.date), esc(t("category." + e.category)), esc(e.description or ""), money(e.amount, cur)]
         for e in report.expenses
     ] + [
-        [_e(m.date), _e(t("tab.maintenance") + " — " + t("service." + m.service_type)),
-         _e(" · ".join(p for p in (m.vendor, m.description) if p)), money(m.cost or 0, cur)]
+        [esc(m.date), esc(t("tab.maintenance") + " — " + t("service." + m.service_type)),
+         esc(" · ".join(p for p in (m.vendor, m.description) if p)), money(m.cost or 0, cur)]
         for m in report.maintenance
     ]
     if cost_rows:
         cost_rows.sort(key=lambda r: r[0])
-        cost_rows.append([f"<b>{_e(t('report.total'))}</b>", "", "",
+        cost_rows.append([f"<b>{esc(t('report.total'))}</b>", "", "",
                           f"<b>{money(report.total_expenses, cur)}</b>"])
         expenses_html = _table(
             [t("expense.date"), t("expense.category"), t("expense.description"), t("expense.amount")],
             cost_rows, {3},
         )
         cat_rows = "".join(
-            f"<tr><td>{_e(c)}</td><td align='right'>{money(v, cur)}</td></tr>"
+            f"<tr><td>{esc(c)}</td><td align='right'>{money(v, cur)}</td></tr>"
             for c, v in report.expenses_by_category.items()
         )
-        expenses_html += f"<h3>{_e(t('report.expenses_by_category'))}</h3><table {HALF}>{cat_rows}</table>"
+        expenses_html += f"<h3>{esc(t('report.expenses_by_category'))}</h3><table {HALF}>{cat_rows}</table>"
     else:
-        expenses_html = f"<p style='color:#777'>{_e(t('report.no_expenses'))}</p>"
+        expenses_html = f"<p style='color:#777'>{esc(t('report.no_expenses'))}</p>"
 
     generated = datetime.now().strftime("%Y-%m-%d %H:%M")
-    return f"""<html><head><meta charset="utf-8"><title>{_e(t('report.title'))} {_e(truck.label)}</title></head>
-<body style="font-family:Arial, Helvetica, sans-serif; font-size:10pt">
-{company}
-<h1>{_e(t('report.title'))}</h1>
-<table cellspacing="0" cellpadding="2">{info}</table>
-<h2>{_e(t('report.summary'))}</h2>
-<table {HALF}>{summary}</table>
-<h2>{_e(t('report.loads'))}</h2>
-{loads_html}
-<h2>{_e(t('report.expenses'))}</h2>
-{expenses_html}
-<p style="color:#777; font-size:8pt">{_e(t('report.cancelled_note'))}<br>{_e(t('report.generated', when=generated))}</p>
-</body></html>"""
+    body = (f"{company_html(settings)}<h1>{esc(t('report.title'))}</h1>{facts_html(info_rows)}"
+            f"<h2>{esc(t('report.summary'))}</h2><table {HALF}>{summary}</table>"
+            f"<h2>{esc(t('report.loads'))}</h2>{loads_html}"
+            f"<h2>{esc(t('report.expenses'))}</h2>{expenses_html}"
+            f"<p style='color:#777; font-size:8pt'>{esc(t('report.cancelled_note'))}<br>"
+            f"{esc(t('report.generated', when=generated))}</p>")
+    return page(body, f"{t('report.title')} {truck.label}")
 
 
 def report_to_csv(report: TruckReport, path: str | Path, settings: dict[str, str]) -> None:
@@ -233,7 +182,7 @@ def report_to_csv(report: TruckReport, path: str | Path, settings: dict[str, str
         w.writerow([t("report.summary")])
         w.writerow([t("report.load_count"), len(report.loads)])
         w.writerow([t("report.total_distance") + f" ({unit})", round(report.total_miles, 2)])
-        w.writerow([t("report.revenue"), round(report.total_revenue, 2)])
+        w.writerow([t("report.revenue"), round(report.gross, 2)])
         w.writerow([t("report.expenses"), round(report.total_expenses, 2)])
         w.writerow([t("report.net"), round(report.net, 2)])
         w.writerow([])

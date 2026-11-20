@@ -2,7 +2,7 @@
 
 Usage (from the project folder, with the app installed):  python docs/make_media.py
 
-Everything is rendered off-screen from the demo data, at 2x resolution for sharp images.
+Everything is rendered off-screen from the demo data, at 1.25x resolution (sharp, yet small files).
 """
 
 from __future__ import annotations
@@ -12,7 +12,9 @@ import sys
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-os.environ.setdefault("QT_SCALE_FACTOR", "2")
+# 1.25x: sharp on the website and in the README (shown about 1100 px wide) while keeping the PNGs
+# small; 2x made the repository three times bigger for no visible gain
+os.environ.setdefault("QT_SCALE_FACTOR", "1.25")
 if os.name == "nt":
     os.environ.setdefault("QT_QPA_FONTDIR", r"C:\Windows\Fonts")
 
@@ -80,16 +82,44 @@ def screenshots() -> dict[str, Path]:
         window.file_label.setText(t("status.file", path=r"C:\Users\you\.truck_tms\tms.db"))
         window.setWindowTitle("Truck TMS — tms.db")
 
+    from datetime import date, timedelta
+
+    from truck_tms.ui.compliance_tab import ComplianceTab
+    from truck_tms.ui.drivers import DriversTab
+    from truck_tms.ui.ifta_tab import IftaTab
+    from truck_tms.ui.invoices import InvoiceDialog, InvoicesTab
+    from truck_tms.ui.loads import LoadsTab
+    from truck_tms.ui.maintenance import MaintenanceTab
+    from truck_tms.ui.statements import StatementsTab
+    from truck_tms.ui.trucks import TrucksTab
+
     tidy_status_bar()
-    window.resize(1360, 1060)  # tall enough for the cards, the charts and the recent loads
+    window.resize(1360, 1340)  # tall enough for the cards, the charts and the recent loads
     window.overview.refresh()  # start the count-up / chart animations, then wait for them to finish
-    settle(1300)
+    settle(1400)
     save(window, "overview")
-    window.resize(1360, 700)
-    for index, name in ((1, "trucks"), (2, "drivers"), (3, "loads"), (4, "statements"), (5, "maintenance")):
-        window.tabs.setCurrentIndex(index)
+    window.resize(1360, 720)
+    pages = ((TrucksTab, "trucks"), (DriversTab, "drivers"), (LoadsTab, "loads"), (InvoicesTab, "invoices"),
+             (StatementsTab, "statements"), (MaintenanceTab, "maintenance"), (ComplianceTab, "compliance"),
+             (IftaTab, "ifta"))
+    for cls, name in pages:
+        window.tabs.setCurrentIndex(window.page_index(cls))
+        if cls is IftaTab:  # the demo loads are in last week's quarter
+            tab, last_week = window.tabs.currentWidget(), date.today() - timedelta(days=7)
+            tab.year.setValue(last_week.year)
+            tab.quarter.setCurrentIndex((last_week.month - 1) // 3)
+        if cls is InvoicesTab:
+            window.tabs.currentWidget().refresh()
+            settle(1100)
         settle()
         save(window, name)
+
+    invoice = InvoiceDialog(db, db.list_invoices()[-2])
+    full_size(invoice)
+    invoice.show()
+    settle(150)
+    save(invoice, "invoice")
+    invoice.close()
 
     first_week = [s for s in db.list_statements() if s.truck_id == 1][0]
     dialog = StatementDialog(db, first_week)

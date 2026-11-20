@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field, fields
 from datetime import date, timedelta
 
 from PySide6.QtCore import Qt, Signal
@@ -17,16 +17,19 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..database import Database
+from ..compliance import attention_needed, compliance_entries
+from ..database import Database, Load
 from ..i18n import t
-from ..report import money, number
+from ..invoicing import compute_receivables
+from ..printout import money, number
 from ..statement import driver_balances
 from ..weeks import week_label, week_start
-from .charts import BarChart, LineChart, RankChart
+from .charts import BarChart, DonutChart, LineChart, RankChart, compact
 from .theme import count_up, icon, token
 from .widgets import button, fill_table, make_table, status_badge
 
 IN_PROGRESS = ("dispatched", "in_transit")
+LOAD_FIELDS = {f.name for f in fields(Load)}
 
 
 @dataclass
@@ -45,10 +48,15 @@ class Overview:
     unpaid_drivers: int
     service_due: int
     reminders: list[tuple[str, str, str]]  # (tone, title, detail)
+    receivable_total: float = 0.0
+    overdue_invoices: int = 0
+    compliance_alerts: int = 0
+    compliance_expired: int = 0
 
 
 def compute_overview(db: Database, today: date | None = None) -> Overview:
     today = today or date.today()
+    settings = db.get_settings()
     start = week_start(today, db.week_start_dow).isoformat()
     week_loads = db.list_loads(week=start, include_cancelled=False)
     trucks = db.list_trucks()
@@ -64,18 +72,28 @@ def compute_overview(db: Database, today: date | None = None) -> Overview:
             detail = m.next_due_date or (f"{m.next_due_odometer:,}" if m.next_due_odometer else "")
             reminders.append(("danger", t("dash.service_due", truck=truck.label if truck else "?",
                                           service=t("service." + m.service_type)), detail))
-    soon = (today + timedelta(days=30)).isoformat()
-    for d in db.list_drivers(active_only=True):
-        if d.license_expiry and d.license_expiry <= soon:
-            expired = d.license_expiry < today.isoformat()
-            reminders.append(("danger" if expired else "warning",
-                              t("dash.cdl_expired" if expired else "dash.cdl_soon", name=d.name), d.license_expiry))
+    alerts = attention_needed(compliance_entries(db, today))
+    for e in alerts:
+        what = t("comp.kind." + e.kind) + (f" · {e.owner}" if e.owner else "")
+        key = "dash.comp_expired" if e.status == "expired" else "dash.comp_soon"
+        reminders.append(("danger" if e.status == "expired" else "warning", t(key, what=what), e.expiry_date))
+    invoices = db.list_invoices()
+    receivables = compute_receivables(db, today, invoices)
+    for inv in sorted(invoices, key=lambda i: -i.days_overdue(today)):
+        late = inv.days_overdue(today)
+        if late:
+            reminders.append(("danger", t("dash.invoice_late", number=inv.invoice_number, n=late),
+                              money(inv.balance, settings["currency"])))
+    order = {"danger": 0, "warning": 1}
+    reminders.sort(key=lambda r: order.get(r[0], 2))
     return Overview(
         week_start=start,
         week_gross=sum(load.gross for load in week_loads),
         week_miles=sum(load.total_miles for load in week_loads),
         week_loads=len(week_loads),
-        in_progress=sum(1 for load in db.list_loads() if load.status in IN_PROGRESS),
+        in_progress=db.conn.execute(
+            f"SELECT COUNT(*) FROM loads WHERE status IN ({','.join('?' * len(IN_PROGRESS))})", IN_PROGRESS
+        ).fetchone()[0],
         active_trucks=sum(1 for tr in trucks if tr.status == "active"),
         total_trucks=len(trucks),
         maintenance_trucks=sum(1 for tr in trucks if tr.status == "maintenance"),
@@ -83,6 +101,10 @@ def compute_overview(db: Database, today: date | None = None) -> Overview:
         unpaid_drivers=len(balances),
         service_due=len(due_trucks),
         reminders=reminders,
+        receivable_total=receivables.open_total,
+        overdue_invoices=receivables.overdue_count,
+        compliance_alerts=len(alerts),
+        compliance_expired=sum(1 for e in alerts if e.status == "expired"),
     )
 
 
@@ -94,29 +116,42 @@ class Trends:
     gross: list[float]               # gross per week
     rate_per_mile: list[float]       # gross / total miles per week (0 when there were no miles)
     top_brokers: list[tuple[str, float]]  # (broker, gross) of the last 90 days, biggest first
+    expenses: list[tuple[str, float]] = field(default_factory=list)  # (category, amount), last 90 days
 
 
 def compute_trends(db: Database, weeks: int = 8, today: date | None = None, broker_days: int = 90,
                    top: int = 5) -> Trends:
     today = today or date.today()
-    current = week_start(today, db.week_start_dow)
+    dow = db.week_start_dow
+    current = week_start(today, dow)
     starts = [(current - timedelta(days=7 * i)).isoformat() for i in range(weeks - 1, -1, -1)]
-    gross = {s: 0.0 for s in starts}
-    miles = {s: 0.0 for s in starts}
+    gross = dict.fromkeys(starts, 0.0)
+    miles = dict.fromkeys(starts, 0.0)
     brokers: dict[str, float] = {}
     since = (today - timedelta(days=broker_days)).isoformat()
-    for load in db.list_loads(include_cancelled=False):
-        week = db.load_week(load)
+    # only loads that can land in the charted weeks (a manual statement week may differ from the
+    # date, so loads with one are always read)
+    first = (date.fromisoformat(starts[0]) - timedelta(days=7)).isoformat()
+    oldest = min(first, since)
+    rows = db.conn.execute(
+        "SELECT * FROM loads WHERE (status != 'cancelled' OR is_tonu = 1)"
+        " AND (statement_week IS NOT NULL OR COALESCE(delivery_date, pickup_date) >= ?)", (oldest,))
+    for load in (Load(**{k: r[k] for k in LOAD_FIELDS.intersection(r.keys())}) for r in rows):
+        week = load.statement_week or (week_start(load.report_date, dow).isoformat() if load.report_date else None)
         if week in gross:
             gross[week] += load.gross
             miles[week] += load.total_miles
         if load.broker and (load.report_date or "") >= since:
             brokers[load.broker] = brokers.get(load.broker, 0.0) + load.gross
+    spent: dict[str, float] = {}
+    for e in db.list_expenses(start=since, end=today.isoformat()):
+        spent[e.category] = spent.get(e.category, 0.0) + e.amount
     return Trends(
         weeks=starts,
         gross=[round(gross[s], 2) for s in starts],
         rate_per_mile=[round(gross[s] / miles[s], 2) if miles[s] else 0.0 for s in starts],
         top_brokers=sorted(brokers.items(), key=lambda kv: -kv[1])[:top],
+        expenses=sorted(((k, round(v, 2)) for k, v in spent.items() if v > 0), key=lambda kv: -kv[1]),
     )
 
 
@@ -189,6 +224,7 @@ class OverviewTab(QWidget):
             ("new_truck", "dash.new_truck", "truck", None),
             ("new_driver", "dash.new_driver", "user", None),
             ("new_statement", "dash.new_statement", "file", None),
+            ("new_invoice", "dash.new_invoice", "receipt", None),
         ):
             btn = button(t(text_key), variant, icon_name)
             btn.clicked.connect(lambda _=False, k=key: self.action_requested.emit(k))
@@ -205,21 +241,26 @@ class OverviewTab(QWidget):
             "moving": StatCard(t("kpi.in_progress"), "truck"),
             "trucks": StatCard(t("kpi.active_trucks"), "check"),
             "unpaid": StatCard(t("kpi.unpaid"), "wallet"),
+            "receivable": StatCard(t("kpi.receivable"), "receipt"),
             "service": StatCard(t("kpi.service_due"), "wrench"),
+            "compliance": StatCard(t("kpi.compliance"), "shield"),
         }
         grid = QGridLayout()
         grid.setSpacing(12)
         for i, key in enumerate(self.cards):
-            grid.addWidget(self.cards[key], i // 3, i % 3)
+            grid.addWidget(self.cards[key], i // 4, i % 4)
 
-        # charts (drawn by the app itself, see charts.py)
+        # charts (drawn by the app itself, see charts.py), two by two
         self.gross_chart = BarChart()
         self.rpm_chart = LineChart()
         self.broker_chart = RankChart()
-        charts = QHBoxLayout()
+        self.expense_chart = DonutChart()
+        charts = QGridLayout()
         charts.setSpacing(12)
-        for title_key, chart in (("chart.weekly_gross", self.gross_chart), ("chart.rate_per_mile", self.rpm_chart),
-                                 ("chart.top_brokers", self.broker_chart)):
+        for i, (title_key, chart) in enumerate((
+            ("chart.weekly_gross", self.gross_chart), ("chart.rate_per_mile", self.rpm_chart),
+            ("chart.top_brokers", self.broker_chart), ("chart.expenses", self.expense_chart),
+        )):
             box = card()
             box.setProperty("lift", False)
             inner_layout = QVBoxLayout(box)
@@ -228,13 +269,14 @@ class OverviewTab(QWidget):
             heading.setProperty("role", "section")
             inner_layout.addWidget(heading)
             inner_layout.addWidget(chart, 1)
-            charts.addWidget(box, 1)
+            charts.addWidget(box, i // 2, i % 2)
+            chart.setMinimumHeight(210)
 
         # recent loads + reminders
         self.recent = make_table([t("load.load_number"), t("report.route"), t("truck"), t("load.gross"),
                                   t("load.status")])
         self.recent.setSortingEnabled(False)
-        self.recent.setMinimumHeight(230)
+        self.recent.setMinimumHeight(300)  # 7 rows without a scroll bar
         head = self.recent.horizontalHeader()
         head.setStretchLastSection(False)
         for column in range(self.recent.columnCount()):
@@ -290,22 +332,35 @@ class OverviewTab(QWidget):
         total = o.total_trucks
         c["trucks"].set_value(o.active_trucks, lambda v: f"{number(v)} / {total}",
                               t("dash.trucks_sub", n=o.maintenance_trucks), animate)
-        c["unpaid"].set_value(o.unpaid_total, lambda v: money(v, cur), t("dash.unpaid_sub", n=o.unpaid_drivers), animate)
+        c["unpaid"].set_value(o.unpaid_total, lambda v: money(v, cur), t("dash.unpaid_sub", n=o.unpaid_drivers),
+                              animate)
         c["unpaid"].set_tone("danger" if o.unpaid_total > 0 else "success")
         c["service"].set_value(o.service_due, lambda v: number(v), t("dash.service_sub"), animate)
         c["service"].set_tone("danger" if o.service_due else "success")
+        c["receivable"].set_value(o.receivable_total, lambda v: money(v, cur),
+                                  t("dash.receivable_sub", n=o.overdue_invoices), animate)
+        c["receivable"].set_tone("danger" if o.overdue_invoices else "info")
+        c["compliance"].set_value(o.compliance_alerts, lambda v: number(v),
+                                  t("dash.compliance_sub", n=o.compliance_expired), animate)
+        c["compliance"].set_tone("danger" if o.compliance_expired else ("info" if o.compliance_alerts else "success"))
 
         trends = self.trends = compute_trends(self.db)
         week_labels = [w[5:] for w in trends.weeks]  # MM-DD
         self.gross_chart.fmt = lambda v: money(v, cur)
+        self.gross_chart.axis_fmt = lambda v: cur + compact(v)
         self.gross_chart.set_data(week_labels, trends.gross, animate)
         self.rpm_chart.fmt = lambda v: f"{money(v, cur)}/{unit}"
+        self.rpm_chart.axis_fmt = lambda v: f"{cur}{v:.2f}"
         self.rpm_chart.set_data(week_labels, trends.rate_per_mile, animate)
         self.broker_chart.fmt = lambda v: money(v, cur)
         self.broker_chart.set_data([b for b, _ in trends.top_brokers], [g for _, g in trends.top_brokers], animate)
+        self.expense_chart.fmt = lambda v: money(v, cur)
+        self.expense_chart.center_title = t("chart.expenses_total")
+        self.expense_chart.set_data([t("category." + k) for k, _ in trends.expenses], [v for _, v in trends.expenses],
+                                    animate)
 
         trucks = {tr.id: tr.label for tr in self.db.list_trucks()}
-        loads = self.db.list_loads()[:7]
+        loads = self.db.list_loads(limit=7)
         fill_table(self.recent, [
             (load.id, [
                 load.load_number or "—",

@@ -81,7 +81,8 @@ def test_empty_state_and_navigation_texts_exist():
 
     keys ={"empty.filtered_title", "empty.filtered_hint", "nav.dark_mode", "nav.light_mode"}
     pages = {cls.empty_key for cls in CrudTab.__subclasses__()} | {CrudTab.empty_key}
-    assert pages == {"generic", "trucks", "drivers", "loads", "statements", "maintenance", "expenses"}
+    assert pages == {"generic", "trucks", "drivers", "loads", "statements", "maintenance", "expenses",
+                     "invoices", "compliance"}
     for page in pages:
         keys |= {f"empty.{page}_title", f"empty.{page}_hint"}
     assert sorted(k for k in keys if k not in STRINGS) == []
@@ -92,8 +93,19 @@ def test_turkish_is_really_translated():
     same = [k for k, v in STRINGS.items() if v["en"] == v["tr"]]
     allowed = {"app.title", "none", "load.load_number", "load.rate_per_mile", "load.tonu", "truck.model",
                "report.net", "unit.km", "pay.desc_per_mile",
-               "doc.kind.rate_con", "import.field.load_number"}  # US industry terms kept in English on purpose
+               "doc.kind.rate_con", "import.field.load_number",
+               "tab.ifta", "comp.kind.form_2290", "inv.method.quick_pay", "inv.method.factoring",
+               }  # US industry terms kept in English on purpose
     assert sorted(set(same) - allowed) == []
+
+
+def test_no_ampersand_in_button_or_menu_texts():
+    """Qt turns '&' in buttons, tabs and menus into a shortcut letter, so 'A & B' shows as 'A _B'
+    ('&File' on purpose is fine)."""
+    for key, texts in STRINGS.items():
+        if key.split(".")[0] in ("tab", "btn", "menu", "nav", "dash") or key.startswith("inv.method."):
+            for lang, text in texts.items():
+                assert "& " not in text, (key, lang)
 
 
 def test_turkish_characters_are_intact():

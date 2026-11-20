@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QDate
-from PySide6.QtGui import QTextDocument
-from PySide6.QtPrintSupport import QPrintDialog, QPrinter
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QTextBrowser, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from ..database import Database, ValidationError
 from ..i18n import t
 from ..report import TruckReport, build_truck_report, report_to_html
-from .export import REPORT_FORMATS, export_with_dialog, safe_name, write_report_files
+from .export import REPORT_FORMATS, export_with_dialog, paper_preview, print_html, safe_name, write_report_files
 from .widgets import button, date_edit, fill_truck_combo, show_error, truck_combo
 
 
@@ -43,9 +41,7 @@ class ReportsTab(QWidget):
         bar.addWidget(self.export_btn)
         bar.addWidget(self.print_btn)
 
-        self.preview = QTextBrowser()
-        # reports always look like paper, in both themes
-        self.preview.setStyleSheet("QTextBrowser { background: #FFFFFF; color: #000000; }")
+        self.preview = paper_preview()
         layout = QVBoxLayout(self)
         layout.addLayout(bar)
         layout.addWidget(self.preview)
@@ -94,8 +90,4 @@ class ReportsTab(QWidget):
     def print_report(self) -> None:
         if not self.report:
             return
-        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
-        if QPrintDialog(printer, self).exec():
-            doc = QTextDocument()
-            doc.setHtml(self.html)
-            doc.print_(printer)
+        print_html(self, self.html)

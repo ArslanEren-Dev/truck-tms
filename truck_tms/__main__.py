@@ -71,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
     if splash:
         splash.show()
         app.processEvents()
-    window = MainWindow(db, on_file_changed=remember)
+    window = MainWindow(db, on_file_changed=remember, check_updates=True)
 
     def show_window() -> None:
         window.setWindowOpacity(0.0)

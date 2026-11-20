@@ -13,12 +13,15 @@ from PySide6.QtWidgets import (
 
 from ..database import LOAD_STATUSES, Database, Load, ValidationError
 from ..i18n import t
-from ..report import money, number
+from ..printout import money, number
 from ..weeks import week_label, week_start
 from .base import CrudTab
 from .dialog_kit import DialogPage, Section
 from .documents import DocumentsPanel
+from .ifta_tab import StateMilesEditor
 from .import_dialog import ImportDialog
+from .invoices import InvoiceDialog
+from .toast import show_toast
 from .widgets import (
     button,
     NumberEdit,
@@ -26,12 +29,9 @@ from .widgets import (
     buttons_box,
     choice_combo,
     driver_combo,
-    fill_driver_combo,
-    fill_truck_combo,
     hint_label,
     set_combo_data,
     Badge,
-    search_box,
     show_error,
     status_badge,
     truck_combo,
@@ -105,10 +105,16 @@ class LoadDialog(QDialog):
         form.addRow(t("load.commodity"), self.commodity)
         form.addRow(t("load.notes"), self.notes)
 
+        self.state_miles = StateMilesEditor(unit)
+        self.states_card = Section(t("ifta.section"), "map")
+        self.states_card.body.addWidget(self.state_miles)
+        self.states_card.body.addStretch(1)
+        page.add_widget(self.states_card, 2, 0)
+
         self.documents = DocumentsPanel(db, load.id if load else None)
         self.documents_card = Section(t("doc.title"), "paperclip")
         self.documents_card.body.addWidget(self.documents)
-        page.add_widget(self.documents_card, 2, 0, 1, 2)
+        page.add_widget(self.documents_card, 2, 1)
         page.finish(buttons_box(self, self.save))
 
         if load:
@@ -130,6 +136,7 @@ class LoadDialog(QDialog):
             self.commodity.setText(load.commodity or "")
             set_combo_data(self.status, load.status)
             self.notes.setPlainText(load.notes or "")
+            self.state_miles.set_states(db.load_states(load.id))
 
         self.truck.currentIndexChanged.connect(self._truck_changed)
         for w in (self.rate, self.extra_pay, self.loaded_miles, self.dead_miles):
@@ -173,6 +180,7 @@ class LoadDialog(QDialog):
             self.totals.setText("")
             return
         rpm = probe.rate_per_mile
+        self.state_miles.set_expected(probe.total_miles)
         self.totals.setText(
             f"{t('load.total_miles')}: <b>{number(probe.total_miles)} {self.unit}</b> · "
             f"{t('load.gross')}: <b>{money(probe.gross, self.cur)}</b> · "
@@ -211,10 +219,12 @@ class LoadDialog(QDialog):
                 status=self.status.currentData(),
                 notes=self.notes.toPlainText(),
             )
+            states = self.state_miles.states()
             if load.id is None:
                 load.id = self.db.add_load(load)
             else:
                 self.db.update_load(load)
+            self.db.set_load_states(load.id, states)
             self.documents.commit(load.id)  # files added before the load had an id
         except ValidationError as exc:
             show_error(self, exc)
@@ -229,24 +239,17 @@ class LoadsTab(CrudTab):
 
     def __init__(self, db: Database, parent: QWidget | None = None):
         super().__init__(db, parent)
-        self.import_btn = button(t("import.button"), None, "upload")
-        self.import_btn.clicked.connect(self.import_loads)
-        self.toolbar.insertWidget(3, self.import_btn)
+        self.import_btn = self.add_tool(t("import.button"), "upload", self.import_loads)
+        self.invoice_btn = self.add_tool(t("inv.for_load"), "receipt", self.invoice_selected)
         empty_import = button(t("import.from_excel"), None, "upload")
         empty_import.clicked.connect(self.import_loads)
         self.empty.add_button(empty_import)
-        self.truck_filter = truck_combo(db, include_all=True)
-        self.driver_filter = driver_combo(db, include_all=True)
+        self.truck_filter = self.add_truck_filter()
+        self.driver_filter = self.add_driver_filter()
         self.status_filter = choice_combo(LOAD_STATUSES, "status.", include_all=True)
-        self.search = search_box()
-        for label, w in ((t("truck"), self.truck_filter), (t("driver"), self.driver_filter),
-                         (t("load.status"), self.status_filter), (None, self.search)):
-            if label:
-                self.add_filter(QLabel(label))
-            self.add_filter(w)
-        for combo in (self.truck_filter, self.driver_filter, self.status_filter):
-            combo.currentIndexChanged.connect(self.refresh)
-        self.search.textChanged.connect(self.refresh)
+        self.status_filter.currentIndexChanged.connect(self.refresh)
+        self.add_filter(self.status_filter, t("load.status"))
+        self.search = self.add_search()
         self.totals = hint_label("")
         self.layout().addWidget(self.totals)
         self.refresh()
@@ -261,6 +264,19 @@ class LoadsTab(CrudTab):
             t("doc.column"),
         ]
 
+    def invoice_selected(self) -> bool:
+        """Open the invoice of the selected load, or start a new one filled from the load."""
+        load_id = self.selected_or_warn()
+        if load_id is None:
+            return False
+        existing = self.db.invoice_for_load(load_id)
+        dialog = InvoiceDialog(self.db, existing, self, None if existing else load_id)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return False
+        self.refresh()
+        show_toast(t("toast.saved"))
+        return True
+
     def import_loads(self) -> bool:
         """Open the Excel/CSV import dialog; returns True when loads were imported."""
         dialog = ImportDialog(self.db, self)
@@ -268,11 +284,6 @@ class LoadsTab(CrudTab):
             self.refresh()
             return True
         return False
-
-    def refresh(self) -> None:
-        fill_truck_combo(self.truck_filter, self.db, include_all=True)
-        fill_driver_combo(self.driver_filter, self.db, include_all=True)
-        super().refresh()
 
     def rows(self):
         cur = self.db.get_settings()["currency"]
@@ -284,11 +295,11 @@ class LoadsTab(CrudTab):
             status=self.status_filter.currentData(),
             search=self.search.text(),
         )
-        counted = [l for l in loads if l.status != "cancelled" or l.is_tonu]
+        counted = [load for load in loads if load.status != "cancelled" or load.is_tonu]
         self.totals.setText(
             f"{t('report.load_count')}: {len(loads)} · "
-            f"{t('load.total_miles')}: {number(sum(l.total_miles for l in counted))} · "
-            f"{t('load.gross')}: {money(sum(l.gross for l in counted), cur)}"
+            f"{t('load.total_miles')}: {number(sum(load.total_miles for load in counted))} · "
+            f"{t('load.gross')}: {money(sum(load.gross for load in counted), cur)}"
         )
         doc_counts = self.db.document_counts()
         rows = []

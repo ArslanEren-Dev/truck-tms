@@ -135,10 +135,10 @@ def test_load_week_auto_and_manual(db):
     assert db.load_week(auto) == "2026-11-16"
     manual = db.get_load(db.add_load(Load(delivery_date="2026-11-18", statement_week="2026-11-26")))
     assert manual.statement_week == "2026-11-23"  # snapped to week start
-    assert {l.id for l in db.list_loads(week="2026-11-16")} == {auto.id}
+    assert {load.id for load in db.list_loads(week="2026-11-16")} == {auto.id}
     db.set_setting("week_start", "6")  # Sunday
     assert db.load_week(auto) == "2026-11-15"
-    assert {l.id for l in db.list_loads(week="2026-11-15")} == {auto.id}
+    assert {load.id for load in db.list_loads(week="2026-11-15")} == {auto.id}
 
 
 def test_list_loads_filters(db):
@@ -150,11 +150,11 @@ def test_list_loads_filters(db):
     db.add_load(Load(truck_id=t1, load_number="X3", pickup_date="2026-02-01", status="cancelled", is_tonu=True))
     db.add_load(Load(truck_id=t2, load_number="Y1", broker="Acme", delivery_date="2026-01-10"))
 
-    assert {l.load_number for l in db.list_loads(truck_id=t1)} == {"#X1", "#X2", "#X3"}
-    assert [l.load_number for l in db.list_loads(search="acme")] == ["#Y1"]
-    assert [l.load_number for l in db.list_loads(driver_id=d1)] == ["#X1"]
-    assert {l.load_number for l in db.list_loads(start="2026-01-01", end="2026-01-31")} == {"#X1", "#Y1"}
-    assert {l.load_number for l in db.list_loads(truck_id=t1, include_cancelled=False)} == {"#X1", "#X3"}
+    assert {load.load_number for load in db.list_loads(truck_id=t1)} == {"#X1", "#X2", "#X3"}
+    assert [load.load_number for load in db.list_loads(search="acme")] == ["#Y1"]
+    assert [load.load_number for load in db.list_loads(driver_id=d1)] == ["#X1"]
+    assert {load.load_number for load in db.list_loads(start="2026-01-01", end="2026-01-31")} == {"#X1", "#Y1"}
+    assert {load.load_number for load in db.list_loads(truck_id=t1, include_cancelled=False)} == {"#X1", "#X3"}
 
 
 def test_delete_truck_keeps_loads_removes_expenses(db):

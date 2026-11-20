@@ -9,6 +9,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QStandardPaths, QUrl
 from PySide6.QtGui import QDesktopServices, QPageLayout, QPageSize, QPdfWriter, QTextDocument
+from PySide6.QtPrintSupport import QPrintDialog, QPrinter
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -19,6 +20,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMessageBox,
+    QTextBrowser,
     QWidget,
 )
 
@@ -101,20 +103,39 @@ def write_statement_files(summaries: list[StatementSummary], fmt: str, folder: P
     return written
 
 
-def write_report_files(report: TruckReport, fmt: str, folder: Path, stem: str,
-                       settings: dict[str, str]) -> list[Path]:
+def write_pdf_csv(html: str, write_csv, fmt: str, folder: Path, stem: str) -> list[Path]:
+    """Write ``<stem>.pdf`` from ``html`` and/or ``<stem>.csv`` with ``write_csv(path)`` (REPORT_FORMATS)."""
     folder.mkdir(parents=True, exist_ok=True)
     stem = safe_name(stem)
     written: list[Path] = []
     if fmt in ("pdf", "pdf_csv"):
-        path = folder / f"{stem}.pdf"
-        html_to_pdf(report_to_html(report, settings), path)
-        written.append(path)
+        written.append(folder / f"{stem}.pdf")
+        html_to_pdf(html, written[-1])
     if fmt in ("csv", "pdf_csv"):
-        path = folder / f"{stem}.csv"
-        report_to_csv(report, path, settings)
-        written.append(path)
+        written.append(folder / f"{stem}.csv")
+        write_csv(written[-1])
     return written
+
+
+def write_report_files(report: TruckReport, fmt: str, folder: Path, stem: str,
+                       settings: dict[str, str]) -> list[Path]:
+    return write_pdf_csv(report_to_html(report, settings), lambda path: report_to_csv(report, path, settings),
+                         fmt, folder, stem)
+
+
+def paper_preview() -> QTextBrowser:
+    """Read-only preview of a printout; it always looks like white paper, in both themes."""
+    preview = QTextBrowser()
+    preview.setStyleSheet("QTextBrowser { background: #FFFFFF; color: #000000; }")
+    return preview
+
+
+def print_html(parent: QWidget, html: str) -> None:
+    printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+    if QPrintDialog(printer, parent).exec():
+        doc = QTextDocument()
+        doc.setHtml(html)
+        doc.print_(printer)
 
 
 def default_export_folder(db: Database) -> Path:

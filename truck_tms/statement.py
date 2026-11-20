@@ -18,11 +18,11 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass, field
 from datetime import datetime
-from html import escape
 from pathlib import Path
 
 from .database import Database, Driver, Load, Statement, StatementItem, Truck, ValidationError
 from .i18n import t
+from .printout import HEAD, TABLE, LoadTotals, company_html, esc, facts_html, money, page, vehicle_text
 from .weeks import week_end, week_label
 
 
@@ -34,7 +34,7 @@ class PayLine:
 
 
 @dataclass
-class StatementSummary:
+class StatementSummary(LoadTotals):
     statement: Statement
     truck: Truck
     loads: list[Load]
@@ -51,25 +51,6 @@ class StatementSummary:
     def week_end(self) -> str:
         return week_end(self.statement.week_start).isoformat()
 
-    @property
-    def gross(self) -> float:
-        return sum(load.gross for load in self.loads)
-
-    @property
-    def loaded_miles(self) -> float:
-        return sum(load.loaded_miles or 0 for load in self.loads)
-
-    @property
-    def dead_miles(self) -> float:
-        return sum(load.dead_miles or 0 for load in self.loads)
-
-    @property
-    def total_miles(self) -> float:
-        return self.loaded_miles + self.dead_miles
-
-    @property
-    def rate_per_mile(self) -> float | None:
-        return self.gross / self.total_miles if self.total_miles else None
 
     # -- company side --------------------------------------------------------
     @property
@@ -192,7 +173,7 @@ def compute_statement(db: Database, statement: Statement, items: list[StatementI
     for load in loads:
         if load.driver_id is None:
             load.driver_id = truck.driver_id
-    drivers = {d.id: d for d in (db.get_driver(i) for i in {l.driver_id for l in loads if l.driver_id}) if d}
+    drivers = {d.id: d for d in (db.get_driver(i) for i in {load.driver_id for load in loads if load.driver_id}) if d}
     settings = db.get_settings()
     summary = StatementSummary(statement, truck, loads, list(items), drivers)
     summary.pay_lines = _pay_lines(loads, drivers, settings["currency"], settings["distance_unit"])
@@ -211,33 +192,21 @@ def driver_balances(db: Database) -> dict[int, float]:
 
 
 # ------------------------------------------------------------------- output
-def money(value: float | None, currency: str) -> str:
-    if value is None:
-        return "—"
-    sign = "-" if value < 0 else ""
-    return f"{sign}{currency}{abs(value):,.2f}"
-
-
-def _e(value) -> str:
-    return escape("" if value is None else str(value))
-
-
-TABLE = "border='1' cellspacing='0' cellpadding='4' width='100%' style='border-collapse:collapse'"
 HALF = TABLE.replace("width='100%'", "width='60%'")
-HEAD = "style='background-color:#e8eef5'"
+
 
 
 def _rows(rows: list[tuple[str, str]], bold_last: bool = False) -> str:
     out = []
     for i, (label, value) in enumerate(rows):
         b1, b2 = ("<b>", "</b>") if bold_last and i == len(rows) - 1 else ("", "")
-        out.append(f"<tr><td>{b1}{_e(label)}{b2}</td><td align='right'>{b1}{_e(value)}{b2}</td></tr>")
+        out.append(f"<tr><td>{b1}{esc(label)}{b2}</td><td align='right'>{b1}{esc(value)}{b2}</td></tr>")
     return "".join(out)
 
 
 def _loads_table(s: StatementSummary, cur: str, unit: str, show_money: bool = True) -> str:
     if not s.loads:
-        return f"<p style='color:#777'>{_e(t('report.no_loads'))}</p>"
+        return f"<p style='color:#777'>{esc(t('report.no_loads'))}</p>"
     heads = [t("load.load_number"), t("report.date"), t("driver"), t("report.route"),
              t("load.loaded_miles"), t("load.dead_miles"), t("load.total_miles")]
     if show_money:
@@ -245,12 +214,12 @@ def _loads_table(s: StatementSummary, cur: str, unit: str, show_money: bool = Tr
     rows = []
     for load in s.loads:
         driver = s.drivers.get(load.driver_id)
-        tonu = f" <b>[{_e(t('load.tonu'))}]</b>" if load.is_tonu else ""
+        tonu = f" <b>[{esc(t('load.tonu'))}]</b>" if load.is_tonu else ""
         cells = [
-            _e(load.load_number or "—") + tonu,
-            _e(load.report_date or "—"),
-            _e(driver.name if driver else "—"),
-            f"{_e(load.pickup_location or '?')} → {_e(load.delivery_location or '?')}",
+            esc(load.load_number or "—") + tonu,
+            esc(load.report_date or "—"),
+            esc(driver.name if driver else "—"),
+            f"{esc(load.pickup_location or '?')} → {esc(load.delivery_location or '?')}",
             f"<div align='right'>{load.loaded_miles or 0:,.0f}</div>",
             f"<div align='right'>{load.dead_miles or 0:,.0f}</div>",
             f"<div align='right'>{load.total_miles:,.0f}</div>",
@@ -265,7 +234,7 @@ def _loads_table(s: StatementSummary, cur: str, unit: str, show_money: bool = Tr
             ]
         rows.append("<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>")
     total = [
-        f"<td colspan='4'><b>{_e(t('report.total'))}</b></td>",
+        f"<td colspan='4'><b>{esc(t('report.total'))}</b></td>",
         f"<td align='right'><b>{s.loaded_miles:,.0f}</b></td>",
         f"<td align='right'><b>{s.dead_miles:,.0f}</b></td>",
         f"<td align='right'><b>{s.total_miles:,.0f}</b></td>",
@@ -277,7 +246,7 @@ def _loads_table(s: StatementSummary, cur: str, unit: str, show_money: bool = Tr
             f"<td align='right'><b>{money(s.gross, cur)}</b></td>",
             f"<td align='right'><b>{money(rpm, cur) if rpm is not None else '—'}</b></td>",
         ]
-    head = "".join(f"<th>{_e(h)}</th>" for h in heads)
+    head = "".join(f"<th>{esc(h)}</th>" for h in heads)
     return f"<table {TABLE}><tr {HEAD}>{head}</tr>{''.join(rows)}<tr>{''.join(total)}</tr></table>"
 
 
@@ -298,38 +267,24 @@ def _driver_rows(s: StatementSummary, cur: str) -> list[tuple[str, str]]:
 
 
 def _header(settings: dict[str, str], title: str, s: StatementSummary) -> str:
-    company = ""
-    if settings.get("company_name"):
-        company += f"<div style='font-size:16pt; font-weight:bold'>{_e(settings['company_name'])}</div>"
-    if settings.get("company_address"):
-        company += f"<div style='color:#555'>{_e(settings['company_address']).replace(chr(10), '<br>')}</div>"
     truck = s.truck
-    vehicle = " ".join(str(p) for p in (truck.year, truck.make, truck.model) if p)
     info = [
         (t("stmt.week"), week_label(s.week_start)),
         (t("truck"), truck.label),
-        (t("truck.vehicle"), vehicle),
+        (t("truck.vehicle"), vehicle_text(truck)),
         (t("truck.owner_name"), truck.owner_name),
         (t("driver"), s.driver_names),
         (t("stmt.status"), t("stmt_status." + s.statement.status)),
     ]
-    info_html = "".join(
-        f"<tr><td style='color:#555; padding-right:16px'>{_e(k)}</td><td><b>{_e(v)}</b></td></tr>"
-        for k, v in info if v
-    )
-    return f"{company}<h1>{_e(title)}</h1><table cellspacing='0' cellpadding='2'>{info_html}</table>"
+    return f"{company_html(settings)}<h1>{esc(title)}</h1>{facts_html(info)}"
 
 
 def _footer(s: StatementSummary) -> str:
     generated = datetime.now().strftime("%Y-%m-%d %H:%M")
-    notes = f"<p><b>{_e(t('load.notes'))}:</b> {_e(s.statement.notes)}</p>" if s.statement.notes else ""
-    return (f"{notes}<p style='color:#777; font-size:8pt'>{_e(t('stmt.week_note'))}<br>"
-            f"{_e(t('report.generated', when=generated))}</p>")
+    notes = f"<p><b>{esc(t('load.notes'))}:</b> {esc(s.statement.notes)}</p>" if s.statement.notes else ""
+    return (f"{notes}<p style='color:#777; font-size:8pt'>{esc(t('stmt.week_note'))}<br>"
+            f"{esc(t('report.generated', when=generated))}</p>")
 
-
-def _wrap(title: str, body: str) -> str:
-    return (f"<html><head><meta charset='utf-8'><title>{_e(title)}</title></head>"
-            f"<body style='font-family:Arial, Helvetica, sans-serif; font-size:10pt'>{body}</body></html>")
 
 
 def statement_to_html(s: StatementSummary, settings: dict[str, str]) -> str:
@@ -368,13 +323,13 @@ def statement_to_html(s: StatementSummary, settings: dict[str, str]) -> str:
     title = t("stmt.title")
     body = (
         _header(settings, title, s)
-        + f"<h2>{_e(t('report.loads'))}</h2>" + _loads_table(s, cur, unit)
-        + f"<h2>{_e(t('stmt.weekly_summary'))}</h2><table {HALF}>{_rows(weekly)}</table>"
-        + f"<h2>{_e(t('stmt.owner_section'))}</h2><table {HALF}>{_rows(owner, bold_last=True)}</table>"
-        + f"<h2>{_e(t('stmt.driver_section'))}</h2><table {HALF}>{_rows(driver, bold_last=True)}</table>"
+        + f"<h2>{esc(t('report.loads'))}</h2>" + _loads_table(s, cur, unit)
+        + f"<h2>{esc(t('stmt.weekly_summary'))}</h2><table {HALF}>{_rows(weekly)}</table>"
+        + f"<h2>{esc(t('stmt.owner_section'))}</h2><table {HALF}>{_rows(owner, bold_last=True)}</table>"
+        + f"<h2>{esc(t('stmt.driver_section'))}</h2><table {HALF}>{_rows(driver, bold_last=True)}</table>"
         + _footer(s)
     )
-    return _wrap(f"{title} {s.truck.label} {s.week_start}", body)
+    return page(body, f"{title} {s.truck.label} {s.week_start}")
 
 
 def driver_statement_to_html(s: StatementSummary, settings: dict[str, str]) -> str:
@@ -396,12 +351,12 @@ def driver_statement_to_html(s: StatementSummary, settings: dict[str, str]) -> s
     title = t("stmt.driver_title")
     body = (
         _header(settings, title, s)
-        + f"<h2>{_e(t('report.loads'))}</h2>" + _loads_table(s, cur, unit, show_money=show_money)
-        + f"<h2>{_e(t('stmt.weekly_summary'))}</h2><table {HALF}>{_rows(miles)}</table>"
-        + f"<h2>{_e(t('stmt.driver_section'))}</h2><table {HALF}>{_rows(driver, bold_last=True)}</table>"
+        + f"<h2>{esc(t('report.loads'))}</h2>" + _loads_table(s, cur, unit, show_money=show_money)
+        + f"<h2>{esc(t('stmt.weekly_summary'))}</h2><table {HALF}>{_rows(miles)}</table>"
+        + f"<h2>{esc(t('stmt.driver_section'))}</h2><table {HALF}>{_rows(driver, bold_last=True)}</table>"
         + _footer(s)
     )
-    return _wrap(f"{title} {s.truck.label} {s.week_start}", body)
+    return page(body, f"{title} {s.truck.label} {s.week_start}")
 
 
 def statement_to_csv(s: StatementSummary, path: str | Path, settings: dict[str, str]) -> None:

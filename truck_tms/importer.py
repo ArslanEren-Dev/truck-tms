@@ -122,7 +122,7 @@ def _read_csv(path: Path) -> list[list[str]]:
         delimiter = dialect.delimiter
     except csv.Error:
         delimiter = "\t" if path.suffix.lower() == ".tsv" else ","
-    return [row for row in csv.reader(text.splitlines(), delimiter=delimiter)]
+    return list(csv.reader(text.splitlines(), delimiter=delimiter))
 
 
 _NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}

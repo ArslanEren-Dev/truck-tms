@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "truck-tms"
-version = "0.5.0"
+version = "0.6.0"
 description = "Simple open-source Transportation Management System (TMS) for small trucking fleets"
 readme = "README.md"
 license = "MIT"
@@ -27,7 +27,7 @@ Issues = "https://github.com/ArslanEren-Dev/truck-tms/issues"
 Download = "https://github.com/ArslanEren-Dev/truck-tms/releases/latest"
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "ruff>=0.6"]
 
 [project.gui-scripts]
 truck-tms = "truck_tms.__main__:main"
@@ -37,6 +37,20 @@ include = ["truck_tms*"]
 
 [tool.setuptools.package-data]
 truck_tms = ["assets/*.ico", "assets/*.svg"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+# errors, bugbear, modern syntax, simplifications, comprehensions, performance
+select = ["E", "F", "W", "B", "UP", "SIM", "C4", "PIE", "PERF"]
+# kept on purpose: try/except/pass reads clearer in Qt clean-up code, explicit loops and
+# if/else blocks are easier to follow, and dict(...) keyword calls read well in tests
+ignore = ["SIM105", "SIM108", "PERF401", "C408"]
+
+[tool.ruff.lint.per-file-ignores]
+"truck_tms/i18n.py" = ["E501"]  # one translation per line, even when it is long
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
