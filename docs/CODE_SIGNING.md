@@ -2,7 +2,7 @@
 
 *[Türkçe özet aşağıda](#türkçe-özet)*
 
-> **Status:** an application to the [SignPath Foundation](https://signpath.org/) open-source program is planned.
+> **Status:** Truck TMS has applied to the [SignPath Foundation](https://signpath.org/) open-source program, and the application is under review.
 > Until it is approved, `TruckTMS.exe` releases are **not code-signed**.
 > Once approved, Windows releases will be signed as described below and this notice will be replaced by:
 > *Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).*
@@ -29,12 +29,18 @@ External contributions are accepted only through reviewed pull requests.
 
 ## Privacy policy
 
-This program will not transfer any information to other networked systems unless specifically requested by the user.
+Apart from the optional update check described below, this program does not transfer any information to other networked
+systems unless the user specifically requests it.
 
-- All data (trucks, drivers, loads, statements, settings) is stored in a local file on the user's computer.
-- The program has no accounts, telemetry, analytics, update checks or advertising.
-- Network access happens only when the user chooses **Help → Project Website / Source Code on GitHub / Report a Problem**,
-  which opens the page in the user's own web browser.
+- All data (trucks, drivers, loads, statements and settings) is stored in a local file on the user's computer.
+- The program has no accounts, telemetry, analytics or advertising.
+- **Update check:** once a day, the program reads the latest public release of this repository from the GitHub API
+  (`https://api.github.com/repos/ArslanEren-Dev/truck-tms/releases/latest`) to let the user know when a new version
+  is available. The request contains no information about the user or their records; GitHub receives only what every
+  web request carries, such as the IP address. The check can be turned off under **Settings → Updates**, and
+  **Help → Check for updates** runs it on demand.
+- Any other network access happens only when the user chooses **Help → Project Website**, **Source Code on GitHub**
+  or **Report a Problem**, which opens the page in the user's own web browser.
 
 ## Maintainer setup (one time)
 
@@ -55,7 +61,7 @@ This program will not transfer any information to other networked systems unless
 
 3. Create the signing policy **`release-signing`** that uses the SignPath Foundation certificate, with manual approval by an approver.
 4. In GitHub: **Settings → Secrets and variables → Actions**
-   - add the **variable** `SIGNPATH_ORGANIZATION_ID` with your SignPath organization id;
+   - add the **variable** `SIGNPATH_ORGANIZATION_ID` with your SignPath organization ID;
    - add the **secret** `SIGNPATH_API_TOKEN` with a SignPath API token.
 5. Publish the next release. The workflow then submits the exe to SignPath, waits for the approval, checks that the signature
    is valid, runs the self-test on the signed exe and attaches it to the release.
@@ -64,12 +70,15 @@ This program will not transfer any information to other networked systems unless
 
 ## Türkçe özet
 
-- **Durum:** [SignPath Foundation](https://signpath.org/) açık kaynak programına başvuru planlanıyor. Başvuru onaylanana kadar
+- **Durum:** [SignPath Foundation](https://signpath.org/) açık kaynak programına başvuru yapıldı ve inceleniyor. Başvuru onaylanana kadar
   `TruckTMS.exe` **imzasızdır**.
 - **İmzalanan dosya:** Yalnızca `TruckTMS.exe`. Bu dosya kişisel bir bilgisayarda değil, her zaman bu repodaki koddan
   GitHub Actions tarafından derlenir. İçindeki Qt, Python ve Microsoft kütüphaneleri zaten kendi üreticileri tarafından imzalıdır.
 - **Ekip:** Tek geliştirici ve onaylayıcı [ArslanEren-Dev](https://github.com/ArslanEren-Dev). GitHub ve SignPath hesaplarında iki aşamalı doğrulama kullanılır.
-- **Gizlilik:** Program, kullanıcı özellikle istemedikçe hiçbir bilgiyi başka bir ağ sistemine göndermez. Bütün veriler kullanıcının
-  bilgisayarındaki bir dosyada durur. Hesap, telemetri, reklam ya da otomatik güncelleme yoktur. İnternet yalnızca kullanıcı
-  **Yardım** menüsünden bir bağlantı seçtiğinde, kendi tarayıcısında açılır.
+- **Gizlilik:** Güncelleme kontrolü dışında program, kullanıcı özellikle istemedikçe hiçbir bilgiyi
+  başka bir ağ sistemine göndermez. Bütün veriler kullanıcının bilgisayarındaki bir dosyada durur. Hesap, telemetri ya da
+  reklam yoktur. Program günde bir kez GitHub'daki herkese açık sürüm bilgisine bakarak yeni sürüm olup olmadığını kontrol
+  eder; bu istekte kullanıcıya veya kayıtlarına ait hiçbir bilgi bulunmaz. Kontrol **Ayarlar → Güncellemeler** bölümünden
+  kapatılabilir. Bunun dışında internet yalnızca kullanıcı **Yardım** menüsünden bir bağlantı seçtiğinde, kendi tarayıcısında
+  açılır.
 - **Kurulum:** Yukarıdaki "Maintainer setup" adımları uygulandığında imzalama, release akışında kendiliğinden devreye girer.
