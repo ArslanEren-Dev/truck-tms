@@ -18,6 +18,7 @@
 <p align="center">
   <b><a href="https://arslaneren-dev.github.io/truck-tms/">Website</a></b> ·
   <b><a href="https://github.com/ArslanEren-Dev/truck-tms/releases/latest">Download</a></b> ·
+  <b><a href="CHANGELOG.md">What's new</a></b> ·
   <b><a href="#türkçe">Türkçe açıklama aşağıda</a></b>
 </p>
 
@@ -177,6 +178,21 @@ truck-tms --db demo.db --demo
 By default data is stored in `~/.truck_tms/tms.db`. You can change this with `--db PATH` or the `TRUCK_TMS_DB` environment variable.
 To back up your data, copy that file. Databases created by older versions are upgraded automatically.
 
+## How it works
+
+| System | What happens |
+|---|---|
+| **Data** | Everything is stored in one SQLite file on your computer (`~/.truck_tms/tms.db` by default, or any file you open). Each change is saved straight away. Older files are upgraded automatically when a new version opens them. |
+| **Backups** | Once a day, a copy goes to `backups/` next to the data file, and the newest 14 are kept. *Save a backup copy* copies the attached documents too. |
+| **Statements** | Gross − dispatcher fee − fuel − tolls − driver net pay (if the driver is paid from the statement) ± owner items = owner payout. See [How the statement is calculated](#how-the-statement-is-calculated). |
+| **Invoices** | Balance due = amount − received − quick pay / factoring fee. The due date is the invoice date + terms. Each unpaid invoice falls into an aging bucket by days past due, and the load's status follows its invoice. |
+| **Compliance** | An item is *Expired* after its date and *Expires soon* within 30 days. Both kinds show up on the Overview. |
+| **IFTA** | Fleet MPG = miles ÷ gallons. Then for each state: taxable gallons = state miles ÷ MPG, net gallons = taxable − tax-paid gallons, and tax = net gallons × your rate. |
+| **Updates** | At most once a day, the app reads the public *latest release* page of this repository and compares version numbers. Nothing about you or your data is sent. You can turn it off in Settings. |
+| **Quality** | Every push runs ruff and the 815 tests on Windows and Linux with Python 3.12 and 3.13. Each test has a 2-minute limit. When a release is published, GitHub builds the exe, self-tests it and attaches it with a SHA-256 checksum. |
+
+All changes, version by version: **[CHANGELOG.md](CHANGELOG.md)**.
+
 ## Development
 
 ```bash
@@ -185,22 +201,29 @@ pytest
 ```
 
 ```
-truck_tms/
-  database.py   SQLite schema, migrations, data classes and validation (no GUI code)
-  statement.py  weekly statement calculation, HTML and CSV (no GUI code)
-  report.py     truck report for a date range (no GUI code)
-  importer.py   Excel/CSV import: .xlsx reader, column matching, row-by-row import (no GUI code)
-  numbers.py    US / Turkish numbers and dates, Excel serial dates (no GUI code)
+truck_tms/                 business logic: no GUI code, tested on its own
+  database.py   SQLite schema (version 3), automatic upgrades, data classes, validation
+  statement.py  weekly statement: owner payout, driver pay, HTML and CSV
+  invoicing.py  invoices, receivables, aging buckets, printable invoice
+  compliance.py expiring documents: expired / expires soon / valid
+  ifta.py       IFTA quarter: fleet MPG, taxable / tax-paid / net gallons, tax per state
+  report.py     truck report for any date range
+  printout.py   shared pieces of every printout (money format, page, header, totals)
+  importer.py   Excel/CSV import: .xlsx reader, column matching, row-by-row import
+  updates.py    asks GitHub for the latest release (version compare, no personal data)
+  numbers.py    US / Turkish numbers and dates, Excel serial dates
   weeks.py      statement-week helpers
   i18n.py       English / Turkish strings (add a language by adding a column)
-  demo.py       sample data
-  ui/           PySide6 windows, tabs, dialogs, theme, start-up animation
+  demo.py       sample data for every page
+  ui/           PySide6: main window, pages, dialogs, charts, theme, animations
   assets/       app icon and theme images
-tests/          pytest tests (database, statements, translations, backups and the GUI itself)
+tests/          815 pytest tests: logic, translations, backups, migrations and the GUI itself
 docs/           website (index.html), logo, banner, screenshots, make_media.py
 build_exe.ps1   builds dist\TruckTMS.exe with PyInstaller
+CHANGELOG.md    what changed in every version
 ```
 
+- `ruff check .` runs the lint rules from `pyproject.toml`; CI runs it too.
 - `python docs/make_media.py` regenerates every screenshot and the banner from the demo data.
 - `TruckTMS.exe --self-test FOLDER` checks a packaged build: it opens every screen in both languages and themes,
   exports PDFs and CSVs, and writes `self_test.log`.
@@ -209,8 +232,8 @@ build_exe.ps1   builds dist\TruckTMS.exe with PyInstaller
 
 The exe is built by GitHub, so you don't have to build it on your own computer:
 
-1. Set the new version in `truck_tms/__init__.py` and `pyproject.toml` (e.g. `0.6.0`).
-2. On GitHub, open **Releases → Draft a new release**, create the tag `v0.6.0`, and click **Publish release**.
+1. Set the new version in `truck_tms/__init__.py` and `pyproject.toml` (e.g. `0.7.0`).
+2. On GitHub, open **Releases → Draft a new release**, create the tag `v0.7.0`, and click **Publish release**.
 3. The [release workflow](.github/workflows/release.yml) runs the tests, builds `TruckTMS.exe`, runs the exe's self-test,
    and attaches `TruckTMS.exe` and its SHA-256 checksum to the release. This takes about 5 minutes; you can watch it on the **Actions** tab.
 
@@ -363,8 +386,8 @@ Eski sürümle oluşturulmuş veri dosyaları otomatik olarak güncellenir.
 
 Exe'yi GitHub derler, kendi bilgisayarınızda derlemeniz gerekmez:
 
-1. `truck_tms/__init__.py` ve `pyproject.toml` dosyalarında sürüm numarasını güncelleyin (örneğin `0.6.0`).
-2. GitHub'da **Releases → Draft a new release** deyin, `v0.6.0` etiketini oluşturun ve **Publish release** deyin.
+1. `truck_tms/__init__.py` ve `pyproject.toml` dosyalarında sürüm numarasını güncelleyin (örneğin `0.7.0`).
+2. GitHub'da **Releases → Draft a new release** deyin, `v0.7.0` etiketini oluşturun ve **Publish release** deyin.
 3. [Release akışı](.github/workflows/release.yml) testleri çalıştırır, `TruckTMS.exe`'yi derler, exe'nin öz testini yapar ve exe ile
    SHA-256 özetini release'e ekler. Yaklaşık 5 dakika sürer; ilerlemeyi **Actions** sekmesinden izleyebilirsiniz.
 
@@ -377,6 +400,21 @@ Etiket koddaki sürümle eşleşmezse akış durur. Release yayınlamadan exe de
 <https://arslaneren-dev.github.io/truck-tms/> adresinde açılır.
 
 Paylaşımlarda görünen kapak görselini ayarlamak için: **Settings → General → Social preview → Edit → Upload an image** ve `docs/banner.png` dosyasını seçin.
+
+### Nasıl çalışır
+
+| Sistem | Ne olur |
+|---|---|
+| **Veri** | Her şey bilgisayarınızdaki tek bir SQLite dosyasında tutulur (varsayılan `~/.truck_tms/tms.db`). Her değişiklik anında kaydedilir. Eski sürümlerin dosyaları yeni sürümde açılınca otomatik güncellenir. |
+| **Yedek** | Günde bir kez `backups/` klasörüne kopya alınır ve son 14 kopya saklanır. *Yedek kopya kaydet* belgeleri de kopyalar. |
+| **Statement** | Brüt − dispatcher kesintisi − yakıt − toll − sürücü net ücreti (statement'tan ödeniyorsa) ± tır sahibi kalemleri = tır sahibine ödeme. |
+| **Fatura** | Kalan borç = tutar − tahsil edilen − quick pay/factoring kesintisi. Vade = fatura tarihi + vade günü. Ödenmemiş her fatura gecikme gününe göre bir yaş grubuna düşer, yükün durumu da faturayı izler. |
+| **Belge takibi** | Tarihi geçen *Süresi doldu*, 30 gün içinde dolacak olan *Yakında doluyor* olarak gösterilir. İkisi de Genel Bakış'ta görünür. |
+| **IFTA** | Filo MPG = mil ÷ galon. Sonra her eyalet için: vergiye tabi galon = eyalet mili ÷ MPG, net galon = vergiye tabi − vergisi ödenmiş galon, vergi = net galon × sizin girdiğiniz oran. |
+| **Güncelleme** | Uygulama en fazla günde bir kez bu deponun herkese açık *son sürüm* sayfasını okuyup sürüm numaralarını karşılaştırır. Size ya da verilerinize dair hiçbir şey gönderilmez. Ayarlar'dan kapatılabilir. |
+| **Kalite** | Her gönderimde ruff denetimi ve 815 test Windows ve Linux'ta, Python 3.12 ve 3.13 ile çalışır. Her testin 2 dakika süre sınırı vardır. Sürüm yayınlanınca GitHub exe'yi derler, kendi kendine test eder ve SHA-256 özetiyle sürüme ekler. |
+
+Sürüm sürüm tüm değişiklikler: **[CHANGELOG.md](CHANGELOG.md)**.
 
 ### Katkı
 

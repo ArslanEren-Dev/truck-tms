@@ -6,7 +6,7 @@
 <title>Truck TMS: open-source TMS for small trucking fleets</title>
 <meta name="description" content="Free, open-source desktop TMS for small trucking fleets and dispatchers: trucks, drivers, loads, weekly statements, maintenance. English and Turkish.">
 <meta property="og:title" content="Truck TMS">
-<meta property="og:description" content="Open-source TMS for small trucking fleets: trucks, drivers, loads, weekly statements and maintenance.">
+<meta property="og:description" content="Open-source TMS for small trucking fleets: trucks, drivers, loads, weekly statements, invoices, compliance reminders, IFTA and maintenance.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://arslaneren-dev.github.io/truck-tms/">
 <meta property="og:image" content="https://arslaneren-dev.github.io/truck-tms/banner.png">
@@ -110,6 +110,12 @@
   .split { display: grid; grid-template-columns: 1fr 1.15fr; gap: 48px; align-items: center; }
   .split.rev { grid-template-columns: 1.15fr 1fr; }
   .split > *, .hero .wrap > *, .grid > *, .steps > * { min-width: 0; }  /* long code lines scroll instead of widening the page */
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px;
+          box-shadow: var(--card-shadow); }
+  .stat b { display: block; font-size: 30px; line-height: 1.2; color: var(--accent); }
+  .stat s { color: var(--muted); font-size: 14px; }
+  .stat span { color: var(--muted); font-size: 14px; }
   ul.checks { list-style: none; padding: 0; margin: 0 0 24px; }
   ul.checks li { padding-left: 30px; position: relative; margin: 10px 0; }
   ul.checks li::before { content: ""; position: absolute; left: 0; top: 4px; width: 18px; height: 18px; border-radius: 50%;
@@ -168,6 +174,7 @@
     <a class="brand" href="#top"><img src="logo.svg" alt="">Truck TMS</a>
     <div class="links">
       <a href="#features"><span lang="en">Features</span><span lang="tr">Özellikler</span></a>
+<a href="#whatsnew"><span lang="en">What's new</span><span lang="tr">Yenilikler</span></a>
       <a href="#statements"><span lang="en">Statements</span><span lang="tr">Statement</span></a>
       <a href="#screens"><span lang="en">Screenshots</span><span lang="tr">Ekranlar</span></a>
       <a href="#download"><span lang="en">Download</span><span lang="tr">İndir</span></a>
@@ -298,7 +305,33 @@
   </div>
 </section>
 
-<section class="alt" id="statements">
+<section class="alt" id="whatsnew">
+  <div class="wrap split">
+    <div>
+      <div class="eyebrow"><span lang="en">What's new in 0.6</span><span lang="tr">0.6'da neler yeni</span></div>
+      <h2><span lang="en">Billing, compliance and IFTA, built in</span><span lang="tr">Faturalama, belge takibi ve IFTA artık içinde</span></h2>
+      <ul class="checks">
+        <li><span lang="en">Invoice a load in one click: terms, quick pay or factoring fees, partial payments and a PDF invoice</span><span lang="tr">Yükü tek tıkla faturalayın: vade, quick pay ya da factoring kesintisi, kısmi ödeme ve PDF fatura</span></li>
+        <li><span lang="en">Receivables at a glance: open, overdue, collected, average days to pay and an aging ring</span><span lang="tr">Alacaklar tek bakışta: açık, gecikmede, tahsil edilen, ortalama ödeme süresi ve yaşlandırma halkası</span></li>
+        <li><span lang="en">Reminders 30 days before a CDL, medical card, registration, insurance, inspection or UCR expires</span><span lang="tr">CDL, sağlık kartı, ruhsat, sigorta, muayene veya UCR'nin süresi dolmadan 30 gün önce hatırlatma</span></li>
+        <li><span lang="en">IFTA quarter worksheet: miles and fuel by state turn into MPG, net gallons and tax or credit</span><span lang="tr">IFTA çeyreklik tablosu: eyalet bazında mil ve yakıttan MPG, net galon ve vergi ya da alacak</span></li>
+        <li><span lang="en">Redesigned animated charts, and an update check that tells you when a new version is out</span><span lang="tr">Yeniden tasarlanan animasyonlu grafikler ve yeni sürüm çıkınca haber veren güncelleme bildirimi</span></li>
+      </ul>
+      <a href="https://github.com/ArslanEren-Dev/truck-tms/blob/main/CHANGELOG.md"><span lang="en">Full changelog →</span><span lang="tr">Tüm sürüm notları →</span></a>
+    </div>
+    <div>
+      <p class="sub" style="margin-bottom:16px"><span lang="en">Faster too. Measured with 6,000 loads:</span><span lang="tr">Üstelik daha hızlı. 6.000 yükle ölçüldü:</span></p>
+      <div class="stats">
+        <div class="stat"><b>18 ms</b><s>579 ms</s> <span lang="en">overview refresh</span><span lang="tr">ana sayfa yenileme</span></div>
+        <div class="stat"><b>9 ms</b><s>497 ms</s> <span lang="en">chart data</span><span lang="tr">grafik verisi</span></div>
+        <div class="stat"><b>0.8 s</b><s>1.8 s</s> <span lang="en">window opens</span><span lang="tr">pencere açılışı</span></div>
+        <div class="stat"><b>815</b> <span lang="en">automated tests on Windows and Linux</span><span lang="tr">otomatik test, Windows ve Linux'ta</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="statements">
   <div class="wrap split">
     <div>
       <div class="eyebrow"><span lang="en">Weekly statements</span><span lang="tr">Haftalık statement</span></div>
@@ -329,7 +362,7 @@
   </div>
 </section>
 
-<section id="screens">
+<section class="alt" id="screens">
   <div class="wrap">
     <div class="eyebrow"><span lang="en">Screenshots</span><span lang="tr">Ekran görüntüleri</span></div>
     <h2><span lang="en">Have a look around</span><span lang="tr">Biraz göz atın</span></h2>
@@ -355,7 +388,7 @@
   </div>
 </section>
 
-<section class="alt" id="data">
+<section id="data">
   <div class="wrap split rev">
     <img class="shot" src="screenshots/export.png" alt="Export dialog" loading="lazy" width="560" height="246">
     <div>
@@ -372,7 +405,7 @@
   </div>
 </section>
 
-<section id="download">
+<section class="alt" id="download">
   <div class="wrap">
     <div class="eyebrow"><span lang="en">Get started</span><span lang="tr">Başlayın</span></div>
     <h2><span lang="en">Up and running in a minute</span><span lang="tr">Bir dakikada hazır</span></h2>
@@ -404,7 +437,7 @@ truck-tms</pre>
   </div>
 </section>
 
-<section class="alt">
+<section>
   <div class="wrap" style="text-align:center">
     <h2><span lang="en">Free and open source</span><span lang="tr">Ücretsiz ve açık kaynak</span></h2>
     <p class="sub" style="margin:0 auto 26px"><span lang="en">MIT licensed. Bug reports, ideas and pull requests are welcome, and so are new languages.</span>
