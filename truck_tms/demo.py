@@ -23,6 +23,16 @@ def seed_demo_data(db: Database) -> None:
     """Fill an empty database with trucks, drivers, loads, maintenance and statements."""
     if db.list_trucks():
         return
+    # ~190 small saves: skip the disk flush after each one (it is fresh sample data), which makes
+    # seeding fast on slow disks too; the normal safe setting comes back right after
+    db.conn.execute("PRAGMA synchronous = OFF")
+    try:
+        _seed(db)
+    finally:
+        db.conn.execute("PRAGMA synchronous = FULL")
+
+
+def _seed(db: Database) -> None:
     today = date.today()
     last_week = week_start(today - timedelta(days=7), db.week_start_dow)
     prev_week = last_week - timedelta(days=7)
