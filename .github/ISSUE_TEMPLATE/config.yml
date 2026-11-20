@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security problem / Güvenlik açığı
+    url: https://github.com/ArslanEren-Dev/truck-tms/security/advisories/new
+    about: Please report security problems privately. / Güvenlik açıklarını lütfen gizli bildirin.
+  - name: Website / Tanıtım sitesi
+    url: https://arslaneren-dev.github.io/truck-tms/
+    about: Screenshots, features and download. / Ekran görüntüleri, özellikler ve indirme.

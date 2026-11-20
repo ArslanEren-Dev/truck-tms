@@ -29,9 +29,9 @@ jobs:
     env:
       SIGNING: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -59,7 +59,7 @@ jobs:
       - name: Upload the unsigned exe for signing
         id: unsigned
         if: env.SIGNING == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: TruckTMS-unsigned
           path: dist/TruckTMS.exe
@@ -99,7 +99,7 @@ jobs:
           Get-Content dist/TruckTMS.exe.sha256
 
       - name: Keep the exe as a build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: TruckTMS-windows
           path: |
