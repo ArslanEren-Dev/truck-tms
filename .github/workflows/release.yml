@@ -1,0 +1,113 @@
+name: release
+
+# Builds TruckTMS.exe on GitHub's own Windows machine whenever a release is published
+# (Releases → Draft a new release → Publish release), tests it, and attaches it to that release.
+# "Run workflow" on the Actions tab builds the exe without a release (download it from the run's Artifacts).
+#
+# Code signing (SignPath Foundation, free for open source) switches on by itself once these exist in
+# Settings → Secrets and variables → Actions:
+#   variable  SIGNPATH_ORGANIZATION_ID   your SignPath organization id
+#   secret    SIGNPATH_API_TOKEN         a SignPath API token
+# with a SignPath project "truck-tms" and a signing policy "release-signing" (see docs/CODE_SIGNING.md).
+# Until then the exe is built and released unsigned.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # attach files to the release
+  actions: read     # lets SignPath read the unsigned build artifact
+
+jobs:
+  build-exe:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      SIGNING: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Release tag matches the app version
+        if: github.event_name == 'release'
+        run: |
+          $tag = "${{ github.event.release.tag_name }}".TrimStart("v")
+          $version = (Select-String -Path truck_tms/__init__.py -Pattern '__version__ = "(.+)"').Matches[0].Groups[1].Value
+          Write-Host "release tag: $tag   app version: $version"
+          if ($tag -ne $version) { throw "Release tag v$tag does not match __version__ $version in truck_tms/__init__.py" }
+
+      - name: Run the tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python -m pip install -q -e ".[dev]"
+          .\.venv\Scripts\python -m pytest -q
+
+      - name: Build TruckTMS.exe
+        run: ./build_exe.ps1
+
+      # ---------------------------------------------------------------- code signing
+      # Every Qt/Python DLL inside the exe is already signed by its vendor; only TruckTMS.exe needs a signature.
+      - name: Upload the unsigned exe for signing
+        id: unsigned
+        if: env.SIGNING == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TruckTMS-unsigned
+          path: dist/TruckTMS.exe
+
+      - name: Sign with SignPath
+        if: env.SIGNING == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: truck-tms
+          signing-policy-slug: release-signing
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: dist-signed
+
+      - name: Use the signed exe
+        if: env.SIGNING == 'true'
+        run: |
+          Copy-Item dist-signed/TruckTMS.exe dist/TruckTMS.exe -Force
+          $sig = Get-AuthenticodeSignature dist/TruckTMS.exe
+          Write-Host "signature: $($sig.Status)  $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne "Valid") { throw "TruckTMS.exe is not validly signed" }
+      # ------------------------------------------------------------------------------
+
+      - name: Self-test the built exe
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP "self-test"
+          $p = Start-Process -FilePath dist/TruckTMS.exe -ArgumentList "--self-test `"$log`"" -PassThru -Wait
+          Get-Content (Join-Path $log "self_test.log") -Encoding utf8
+          if ($p.ExitCode -ne 0) { throw "Self-test failed with exit code $($p.ExitCode)" }
+
+      - name: Checksum
+        run: |
+          $hash = (Get-FileHash dist/TruckTMS.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  TruckTMS.exe" | Set-Content dist/TruckTMS.exe.sha256 -Encoding ascii
+          Get-Content dist/TruckTMS.exe.sha256
+
+      - name: Keep the exe as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TruckTMS-windows
+          path: |
+            dist/TruckTMS.exe
+            dist/TruckTMS.exe.sha256
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/TruckTMS.exe dist/TruckTMS.exe.sha256 --clobber

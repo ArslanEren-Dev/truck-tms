@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1E63C6"/>
+      <stop offset="1" stop-color="#0B1F3F"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7FB2F0"/>
+      <stop offset="1" stop-color="#2F6FC9"/>
+    </linearGradient>
+  </defs>
+
+  <!-- background -->
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#bg)"/>
+
+  <!-- road -->
+  <rect x="44" y="388" width="424" height="10" rx="5" fill="#FFFFFF" fill-opacity="0.18"/>
+  <rect x="96" y="388" width="56" height="10" rx="5" fill="#F5A623"/>
+  <rect x="208" y="388" width="56" height="10" rx="5" fill="#F5A623"/>
+  <rect x="320" y="388" width="56" height="10" rx="5" fill="#F5A623"/>
+
+  <!-- speed lines -->
+  <rect x="34" y="196" width="40" height="12" rx="6" fill="#F5A623"/>
+  <rect x="22" y="236" width="52" height="12" rx="6" fill="#F5A623"/>
+  <rect x="40" y="276" width="34" height="12" rx="6" fill="#F5A623"/>
+
+  <!-- trailer -->
+  <rect x="88" y="160" width="222" height="160" rx="16" fill="#FFFFFF"/>
+  <text x="199" y="266" text-anchor="middle" font-family="Segoe UI, Arial, Helvetica, sans-serif"
+        font-size="72" font-weight="900" fill="#1E63C6" letter-spacing="2">TMS</text>
+
+  <!-- cab -->
+  <path d="M322 200 H394 Q408 200 418 212 L452 262 Q460 274 460 288 V320 H322 Z" fill="#FFFFFF"/>
+  <path d="M340 216 H390 Q398 216 404 224 L428 262 H340 Z" fill="url(#glass)"/>
+  <rect x="440" y="290" width="20" height="12" rx="4" fill="#F5A623"/>
+
+  <!-- chassis -->
+  <rect x="88" y="318" width="372" height="14" rx="7" fill="#FFFFFF"/>
+
+  <!-- wheels -->
+  <g fill="#0B1F3F" stroke="#FFFFFF" stroke-width="10">
+    <circle cx="136" cy="344" r="30"/>
+    <circle cx="206" cy="344" r="30"/>
+    <circle cx="356" cy="344" r="30"/>
+    <circle cx="420" cy="344" r="30"/>
+  </g>
+  <g fill="#FFFFFF">
+    <circle cx="136" cy="344" r="9"/>
+    <circle cx="206" cy="344" r="9"/>
+    <circle cx="356" cy="344" r="9"/>
+    <circle cx="420" cy="344" r="9"/>
+  </g>
+</svg>

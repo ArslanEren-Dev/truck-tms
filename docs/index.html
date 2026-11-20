@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Truck TMS: open-source TMS for small trucking fleets</title>
+<meta name="description" content="Free, open-source desktop TMS for small trucking fleets and dispatchers: trucks, drivers, loads, weekly statements, maintenance. English and Turkish.">
+<meta property="og:title" content="Truck TMS">
+<meta property="og:description" content="Open-source TMS for small trucking fleets: trucks, drivers, loads, weekly statements and maintenance.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://arslaneren-dev.github.io/truck-tms/">
+<meta property="og:image" content="https://arslaneren-dev.github.io/truck-tms/banner.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://arslaneren-dev.github.io/truck-tms/">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #ffffff; --surface: #f5f7fa; --surface2: #edf1f6; --border: #dde3ea;
+    --text: #1b2430; --muted: #5f6b7a; --accent: #1e63c6; --accent2: #164f9f; --orange: #f5a623;
+    --navy: #0b1f3f; --card-shadow: 0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --surface: #161a20; --surface2: #1e242c; --border: #2a313a;
+      --text: #e7eaee; --muted: #9aa4b0; --accent: #4c8df7; --accent2: #3b82f6;
+      --card-shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --surface: #161a20; --surface2: #1e242c; --border: #2a313a;
+    --text: #e7eaee; --muted: #9aa4b0; --accent: #4c8df7; --accent2: #3b82f6;
+    --card-shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.6 "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  html[data-lang="en"] [lang="tr"], html[data-lang="tr"] [lang="en"] { display: none !important; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  img { max-width: 100%; height: auto; display: block; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
+  code, pre { font-family: Consolas, "SF Mono", Menlo, monospace; }
+
+  /* nav */
+  nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent);
+        backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+  nav .wrap { display: flex; align-items: center; gap: 18px; height: 62px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; color: var(--text); white-space: nowrap; }
+  .brand img { width: 30px; height: 30px; }
+  .links { display: flex; gap: 18px; margin-left: 12px; }
+  .links a { color: var(--muted); font-weight: 600; font-size: 15px; }
+  .links a:hover { color: var(--text); text-decoration: none; }
+  .spacer { flex: 1; }
+  .toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+  .toggle button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 13px;
+                   font-weight: 700; padding: 5px 12px; cursor: pointer; }
+  .toggle button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .icon-btn { border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 999px;
+              width: 34px; height: 34px; cursor: pointer; display: grid; place-items: center; }
+
+  /* buttons */
+  .btn { display: inline-flex; align-items: center; gap: 9px; padding: 12px 20px; border-radius: 10px;
+         font-weight: 700; border: 1px solid var(--border); color: var(--text); background: var(--bg);
+         transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
+  .btn:hover { text-decoration: none; transform: translateY(-2px); box-shadow: var(--card-shadow); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent2); box-shadow: 0 10px 24px rgba(30,99,198,.35); }
+  .btn svg { width: 18px; height: 18px; }
+
+  /* hero */
+  .hero { background: linear-gradient(135deg, #1e63c6 0%, #0b1f3f 75%); color: #fff; overflow: hidden; position: relative; }
+  .hero .wrap { display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: center; padding-top: 64px; padding-bottom: 150px; }
+  .hero h1 { font-size: clamp(36px, 5vw, 58px); line-height: 1.08; margin: 0 0 18px; font-weight: 900; letter-spacing: -.02em; }
+  .hero h1 .hl { color: var(--orange); }
+  .hero p.lead { font-size: 19px; color: rgba(255,255,255,.85); margin: 0 0 28px; max-width: 34em; }
+  .hero .cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .hero .btn:not(.primary) { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.25); color: #fff; }
+  .hero .btn.primary { background: var(--orange); border-color: var(--orange); color: #1b1b1b; }
+  .hero .btn.primary:hover { background: #ffb53d; box-shadow: 0 10px 24px rgba(245,166,35,.35); }
+  .hero .note { margin-top: 16px; font-size: 14px; color: rgba(255,255,255,.7); }
+  .window { border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 30px 60px rgba(0,0,0,.35);
+            border: 1px solid rgba(255,255,255,.2); }
+  .window .bar { height: 32px; background: #f3f6fa; display: flex; align-items: center; gap: 8px; padding: 0 12px;
+                 font-size: 12.5px; color: #1b2430; }
+  .window .bar img { width: 16px; height: 16px; }
+  .window .bar .caps { margin-left: auto; letter-spacing: 14px; color: #6b7685; }
+  .hero-shot { width: 100%; height: auto; aspect-ratio: 1240 / 720; object-fit: cover; object-position: top left; }
+  .road { position: absolute; left: 0; right: 0; bottom: 0; height: 140px; pointer-events: none; }
+
+  /* sections */
+  section { padding: 84px 0; }
+  section.alt { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .eyebrow { color: var(--accent); font-weight: 800; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
+  h2 { font-size: clamp(28px, 3.4vw, 40px); line-height: 1.15; margin: 8px 0 14px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 18px; max-width: 46em; margin: 0 0 40px; }
+
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .card { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 22px;
+          box-shadow: var(--card-shadow); transition: transform .18s ease, border-color .18s ease; }
+  .card:hover { transform: translateY(-4px); border-color: var(--accent); }
+  .card .ic { width: 42px; height: 42px; border-radius: 10px; display: grid; place-items: center;
+              background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); margin-bottom: 14px; }
+  .card .ic svg { width: 22px; height: 22px; }
+  .card h3 { margin: 0 0 6px; font-size: 17px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .split { display: grid; grid-template-columns: 1fr 1.15fr; gap: 48px; align-items: center; }
+  .split.rev { grid-template-columns: 1.15fr 1fr; }
+  .split > *, .hero .wrap > *, .grid > *, .steps > * { min-width: 0; }  /* long code lines scroll instead of widening the page */
+  ul.checks { list-style: none; padding: 0; margin: 0 0 24px; }
+  ul.checks li { padding-left: 30px; position: relative; margin: 10px 0; }
+  ul.checks li::before { content: ""; position: absolute; left: 0; top: 4px; width: 18px; height: 18px; border-radius: 50%;
+     background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat; }
+  pre.formula { background: var(--navy); color: #e7eef8; border-radius: 12px; padding: 18px 20px; font-size: 14px;
+                overflow-x: auto; line-height: 1.7; margin: 0; }
+  pre.formula b { color: var(--orange); font-weight: 700; }
+  .shot { border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--card-shadow); overflow: hidden; background: #fff; }
+
+  /* gallery */
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .tabs button { border: 1px solid var(--border); background: var(--bg); color: var(--muted); font: inherit; font-weight: 700;
+                 font-size: 14px; padding: 8px 14px; border-radius: 999px; cursor: pointer; transition: all .15s ease; }
+  .tabs button:hover { color: var(--text); border-color: var(--accent); }
+  .tabs button[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .stage img { width: 100%; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--card-shadow);
+               animation: fade .35s ease; }
+  .stage figcaption { color: var(--muted); font-size: 15px; margin-top: 12px; text-align: center; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* steps */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; counter-reset: s; margin-bottom: 26px; }
+  .step { counter-increment: s; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 22px 22px 22px 70px; position: relative; }
+  .step::before { content: counter(s); position: absolute; left: 22px; top: 20px; width: 32px; height: 32px; border-radius: 50%;
+                  background: var(--accent); color: #fff; font-weight: 800; display: grid; place-items: center; }
+  .step h3 { margin: 0 0 4px; font-size: 17px; }
+  .step p { margin: 0; color: var(--muted); font-size: 15px; }
+  .notice { border: 1px solid color-mix(in srgb, var(--orange) 60%, var(--border)); background: color-mix(in srgb, var(--orange) 10%, var(--bg));
+            border-radius: 12px; padding: 16px 18px; font-size: 15px; }
+  pre.code { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 14px; }
+
+  footer { border-top: 1px solid var(--border); padding: 36px 0; color: var(--muted); font-size: 14px; }
+  footer .wrap { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+
+  @media (max-width: 960px) {
+    .hero .wrap, .split, .split.rev { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .steps { grid-template-columns: 1fr; }
+    .links { display: none; }
+  }
+  @media (max-width: 560px) {
+    .grid { grid-template-columns: 1fr; }
+    nav .wrap { gap: 8px; }
+    nav .btn .label { display: none; }
+    nav .btn { padding: 7px 9px !important; }
+    .hero .wrap { padding-top: 40px; }
+    section { padding: 60px 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="logo.svg" alt="">Truck TMS</a>
+    <div class="links">
+      <a href="#features"><span lang="en">Features</span><span lang="tr">Özellikler</span></a>
+      <a href="#statements"><span lang="en">Statements</span><span lang="tr">Statement</span></a>
+      <a href="#screens"><span lang="en">Screenshots</span><span lang="tr">Ekranlar</span></a>
+      <a href="#download"><span lang="en">Download</span><span lang="tr">İndir</span></a>
+    </div>
+    <div class="spacer"></div>
+    <div class="toggle" role="group" aria-label="Language">
+      <button type="button" data-set-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-set-lang="tr" aria-pressed="false">TR</button>
+    </div>
+    <button class="icon-btn" type="button" id="theme-btn" aria-label="Toggle dark mode" title="Light / dark">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+    <a class="btn" href="https://github.com/ArslanEren-Dev/truck-tms" data-github style="padding:7px 14px">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="label">GitHub</span>
+    </a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <h1>
+        <span lang="en">Run your trucks, <span class="hl">not spreadsheets.</span></span>
+        <span lang="tr">Excel'i bırakın, <span class="hl">tırlarınızı yönetin.</span></span>
+      </h1>
+      <p class="lead">
+        <span lang="en">Truck TMS is a free, open-source desktop app for small trucking fleets, dispatchers and owner-operators.
+          Trucks, drivers, loads, weekly statements and maintenance live in one place, on your own computer.</span>
+        <span lang="tr">Truck TMS; küçük nakliye filoları, dispatcher'lar ve kendi tırıyla çalışanlar için ücretsiz, açık kaynaklı bir
+          masaüstü uygulamasıdır. Tırlar, sürücüler, yükler, haftalık statement'lar ve bakım tek bir yerde, kendi bilgisayarınızda.</span>
+      </p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/ArslanEren-Dev/truck-tms/releases/latest" data-release>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+          <span lang="en">Download for Windows</span><span lang="tr">Windows için indir</span>
+        </a>
+        <a class="btn" href="https://github.com/ArslanEren-Dev/truck-tms" data-github>
+          <span lang="en">View source on GitHub</span><span lang="tr">Kaynak kodu GitHub'da</span>
+        </a>
+      </div>
+      <p class="note">
+        <span lang="en">Free · MIT license · Windows 10/11 · English &amp; Türkçe · No account, no cloud</span>
+        <span lang="tr">Ücretsiz · MIT lisansı · Windows 10/11 · Türkçe &amp; English · Hesap yok, bulut yok</span>
+      </p>
+    </div>
+    <div class="window">
+      <div class="bar"><img src="logo.svg" alt="">Truck TMS — <span lang="en">Weekly Statement</span><span lang="tr">Haftalık Statement</span><span class="caps">–▢✕</span></div>
+      <img class="hero-shot" lang="en" src="screenshots/statement.png" alt="Weekly statement window of Truck TMS" width="1240" height="820">
+      <img class="hero-shot" lang="tr" src="screenshots/statement_tr.png" alt="Truck TMS haftalık statement penceresi" width="1240" height="820">
+    </div>
+  </div>
+
+  <!-- the same truck-on-the-road as the app's start-up animation -->
+  <svg class="road" viewBox="0 0 1440 140" preserveAspectRatio="none" aria-hidden="true">
+    <path id="road" d="M-40 92 C 240 92, 330 40, 600 48 S 980 112, 1480 82" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="46"/>
+    <path d="M-40 92 C 240 92, 330 40, 600 48 S 980 112, 1480 82" fill="none" stroke="#1c2733" stroke-width="36"/>
+    <path d="M-40 92 C 240 92, 330 40, 600 48 S 980 112, 1480 82" fill="none" stroke="#f5a623" stroke-width="3" stroke-dasharray="14 12"/>
+    <g>
+      <animateMotion dur="14s" repeatCount="indefinite" rotate="auto"><mpath href="#road"/></animateMotion>
+      <g transform="translate(-36,-34)">
+        <rect x="0" y="0" width="44" height="27" rx="3" fill="#fff"/>
+        <path d="M47 6h12l11 10v11H47z" fill="#fff"/>
+        <path d="M51 9h7l7 7H51z" fill="#7fb2f0"/>
+        <text x="22" y="18" font-size="10" font-weight="800" fill="#1e63c6" text-anchor="middle" font-family="Segoe UI, Arial">TMS</text>
+        <g fill="#0b1f3f" stroke="#fff" stroke-width="2"><circle cx="10" cy="30" r="6"/><circle cx="31" cy="30" r="6"/><circle cx="60" cy="30" r="6"/></g>
+      </g>
+    </g>
+  </svg>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="eyebrow"><span lang="en">Everything in one app</span><span lang="tr">Hepsi tek uygulamada</span></div>
+    <h2><span lang="en">Built for how small fleets actually work</span><span lang="tr">Küçük filoların gerçek iş akışına göre tasarlandı</span></h2>
+    <p class="sub"><span lang="en">Enter only what you know; every load detail is optional. Fill in the rest later, and the totals update by themselves.</span>
+      <span lang="tr">Yalnızca bildiğinizi girin; yük detaylarının hepsi isteğe bağlıdır. Gerisini sonra tamamlarsınız, toplamlar kendiliğinden güncellenir.</span></p>
+    <div class="grid">
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="12" height="10" rx="1"/><path d="M14 9h4l3 3v4h-7M6 19a2 2 0 1 0 0-.01M17 19a2 2 0 1 0 0-.01"/></svg></div>
+        <h3><span lang="en">Trucks</span><span lang="tr">Tırlar</span></h3>
+        <p><span lang="en">Plate, unit # or both. US makes (Freightliner, Kenworth, Peterbilt…), odometer, owner, and a plate history.</span>
+          <span lang="tr">Plaka, araç kodu ya da ikisi. ABD markaları (Freightliner, Kenworth, Peterbilt…), sayaç, tır sahibi ve plaka geçmişi.</span></p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+        <h3><span lang="en">Drivers</span><span lang="tr">Sürücüler</span></h3>
+        <p><span lang="en">CDL and expiration, pay as a percentage, per mile or fixed weekly, and an unpaid balance per driver.</span>
+          <span lang="tr">Ehliyet (CDL) ve bitiş tarihi; yüzde, mil başına veya sabit haftalık ücret; her sürücü için ödenmemiş bakiye.</span></p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4zM3 12l9 4 9-4M3 17l9 4 9-4"/></svg></div>
+        <h3><span lang="en">Loads</span><span lang="tr">Yükler</span></h3>
+        <p><span lang="en">Load # with "#", rate and extra pay, loaded and dead miles, rate per mile, TONU, and the statement week.</span>
+          <span lang="tr">"#" ile başlayan Load #, rate ve ek ödeme, yüklü ve boş mil, mil başına rate, TONU ve statement haftası.</span></p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6zM14 3v4h4M9 13h6M9 17h6"/></svg></div>
+        <h3><span lang="en">Weekly statements</span><span lang="tr">Haftalık statement</span></h3>
+        <p><span lang="en">Fuel, tolls, dispatcher fee, driver pay, deductions and the owner payout, calculated for you.</span>
+          <span lang="tr">Yakıt, toll, dispatcher kesintisi, sürücü ücreti, kesintiler ve tır sahibine ödeme sizin yerinize hesaplanır.</span></p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg></div>
+        <h3><span lang="en">Maintenance</span><span lang="tr">Bakım</span></h3>
+        <p><span lang="en">Service records with cost and shop. The truck list warns you in red when the next service is due.</span>
+          <span lang="tr">Tutarı ve servisiyle bakım kayıtları. Sonraki bakım zamanı geldiğinde tır listesi kırmızıyla uyarır.</span></p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></div>
+        <h3><span lang="en">PDF &amp; Excel export</span><span lang="tr">PDF ve Excel çıktısı</span></h3>
+        <p><span lang="en">Owner PDF, driver PDF or CSV, for one statement or the whole week. You choose the folder and the file name.</span>
+          <span lang="tr">Tır sahibi PDF'i, sürücü PDF'i veya CSV; tek statement ya da bütün hafta. Klasörü ve dosya adını siz seçersiniz.</span></p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5zM8 3v5h7V3M8 14h8v7H8z"/></svg></div>
+        <h3><span lang="en">Always saved</span><span lang="tr">Her zaman kayıtlı</span></h3>
+        <p><span lang="en">Every change is saved instantly. Daily automatic backups, plus backup copies whenever you want.</span>
+          <span lang="tr">Her değişiklik anında kaydedilir. Her gün otomatik yedek alınır, istediğiniz an yedek kopya da alabilirsiniz.</span></p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></div>
+        <h3><span lang="en">English &amp; Türkçe</span><span lang="tr">Türkçe &amp; English</span></h3>
+        <p><span lang="en">The whole app, PDFs included, in both languages, with a white or black theme.</span>
+          <span lang="tr">PDF'ler dahil uygulamanın tamamı iki dilde; beyaz veya siyah tema seçeneğiyle.</span></p></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="statements">
+  <div class="wrap split">
+    <div>
+      <div class="eyebrow"><span lang="en">Weekly statements</span><span lang="tr">Haftalık statement</span></div>
+      <h2><span lang="en">From loads to owner payout in one screen</span><span lang="tr">Yüklerden tır sahibine ödemeye, tek ekranda</span></h2>
+      <ul class="checks">
+        <li><span lang="en">The week's loads are added automatically, and TONU is counted too</span><span lang="tr">Haftanın yükleri otomatik gelir, TONU da sayılır</span></li>
+        <li><span lang="en">Total weekly miles (loaded + dead) and total weekly gross</span><span lang="tr">Haftalık toplam mil (yüklü + boş) ve haftalık toplam brüt</span></li>
+        <li><span lang="en">Track what the driver was actually paid, and when</span><span lang="tr">Sürücüye gerçekte ne ödendiğini ve ne zaman ödendiğini takip edin</span></li>
+        <li><span lang="en">The summary updates live while you type</span><span lang="tr">Siz yazarken özet anında güncellenir</span></li>
+      </ul>
+<pre class="formula"><span lang="en"><b>Owner payout</b>  = weekly gross
+              − company / dispatcher fee
+              − fuel − tolls
+              − driver net pay
+              + owner additions − owner deductions
+
+<b>Driver net</b>    = driver pay + additions − deductions
+<b>Balance</b>       = driver net − actually paid</span><span lang="tr"><b>Tır sahibine ödeme</b> = haftalık brüt
+                     − şirket / dispatcher kesintisi
+                     − yakıt − toll
+                     − sürücü net ödemesi
+                     + eklenenler − kesintiler
+
+<b>Sürücü net</b>         = ücret + eklenenler − kesilenler
+<b>Bakiye</b>             = sürücü net − gerçekte ödenen</span></pre>
+    </div>
+    <img class="shot" src="screenshots/statements.png" alt="List of weekly statements" loading="lazy" width="1360" height="700">
+  </div>
+</section>
+
+<section id="screens">
+  <div class="wrap">
+    <div class="eyebrow"><span lang="en">Screenshots</span><span lang="tr">Ekran görüntüleri</span></div>
+    <h2><span lang="en">Have a look around</span><span lang="tr">Biraz göz atın</span></h2>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-shot="overview"><span lang="en">Overview</span><span lang="tr">Genel Bakış</span></button>
+      <button role="tab" aria-selected="false" data-shot="trucks"><span lang="en">Trucks</span><span lang="tr">Tırlar</span></button>
+      <button role="tab" aria-selected="false" data-shot="loads"><span lang="en">Loads</span><span lang="tr">Yükler</span></button>
+      <button role="tab" aria-selected="false" data-shot="drivers"><span lang="en">Drivers</span><span lang="tr">Sürücüler</span></button>
+      <button role="tab" aria-selected="false" data-shot="maintenance"><span lang="en">Maintenance</span><span lang="tr">Bakım</span></button>
+      <button role="tab" aria-selected="false" data-shot="dark_tr"><span lang="en">Dark theme · Türkçe</span><span lang="tr">Koyu tema · Türkçe</span></button>
+      <button role="tab" aria-selected="false" data-shot="import"><span lang="en">Excel import</span><span lang="tr">Excel'den aktarma</span></button>
+      <button role="tab" aria-selected="false" data-shot="load_documents"><span lang="en">Load documents</span><span lang="tr">Yük belgeleri</span></button>
+      <button role="tab" aria-selected="false" data-shot="export"><span lang="en">Export</span><span lang="tr">Dışa aktarma</span></button>
+      <button role="tab" aria-selected="false" data-shot="splash"><span lang="en">Start-up</span><span lang="tr">Açılış</span></button>
+    </div>
+    <figure class="stage" style="margin:0">
+      <img id="stage-img" src="screenshots/overview.png" alt="Truck TMS screenshot" width="1360" height="700">
+      <figcaption id="stage-cap"></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="alt" id="data">
+  <div class="wrap split rev">
+    <img class="shot" src="screenshots/export.png" alt="Export dialog" loading="lazy" width="560" height="246">
+    <div>
+      <div class="eyebrow"><span lang="en">Your data, your computer</span><span lang="tr">Verileriniz sizin bilgisayarınızda</span></div>
+      <h2><span lang="en">Nothing gets lost</span><span lang="tr">Hiçbir şey kaybolmaz</span></h2>
+      <ul class="checks">
+        <li><span lang="en">Everything is stored in one file. The status bar always shows where it is</span><span lang="tr">Her şey tek bir dosyada tutulur; durum çubuğu dosyanın yerini her zaman gösterir</span></li>
+        <li><span lang="en">Every change is saved instantly, with "Saved at 14:02"</span><span lang="tr">Her değişiklik anında kaydedilir: "Kaydedildi: 14:02"</span></li>
+        <li><span lang="en">Daily automatic backups for 14 days, plus <i>File → Save a backup copy</i></span><span lang="tr">14 gün boyunca günlük otomatik yedek, ayrıca <i>Dosya → Yedek kopya kaydet</i></span></li>
+        <li><span lang="en">Several data files are supported: <i>File → New / Open</i></span><span lang="tr">Birden fazla veri dosyası kullanılabilir: <i>Dosya → Yeni / Aç</i></span></li>
+        <li><span lang="en">No account, no subscription, no cloud</span><span lang="tr">Hesap yok, abonelik yok, bulut yok</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="wrap">
+    <div class="eyebrow"><span lang="en">Get started</span><span lang="tr">Başlayın</span></div>
+    <h2><span lang="en">Up and running in a minute</span><span lang="tr">Bir dakikada hazır</span></h2>
+    <div class="steps">
+      <div class="step"><h3><span lang="en">Download</span><span lang="tr">İndirin</span></h3>
+        <p><span lang="en">Get <b>TruckTMS.exe</b> from the <a href="https://github.com/ArslanEren-Dev/truck-tms/releases/latest" data-release>latest release</a>. There is no installer and no Python to install.</span>
+          <span lang="tr"><a href="https://github.com/ArslanEren-Dev/truck-tms/releases/latest" data-release>Son sürümden</a> <b>TruckTMS.exe</b> dosyasını indirin. Kurulum ya da Python gerekmez.</span></p></div>
+      <div class="step"><h3><span lang="en">Double-click</span><span lang="tr">Çift tıklayın</span></h3>
+        <p><span lang="en">A truck drives down the road while the app loads. That's it.</span>
+          <span lang="tr">Uygulama yüklenirken bir tır yolda ilerler. Hepsi bu kadar.</span></p></div>
+      <div class="step"><h3><span lang="en">Try the demo</span><span lang="tr">Demoyu deneyin</span></h3>
+        <p><span lang="en">Run <code>TruckTMS.exe --db demo.db --demo</code> to explore with sample trucks, loads and statements.</span>
+          <span lang="tr">Örnek tır, yük ve statement'larla denemek için <code>TruckTMS.exe --db demo.db --demo</code> komutunu çalıştırın.</span></p></div>
+    </div>
+    <div class="notice">
+      <span lang="en"><b>Windows warning?</b> The exe is not code-signed yet, so Windows may show "Windows protected your PC". Click
+        <b>More info → Run anyway</b>. If <i>Smart App Control</i> blocks it, run the app from source instead (below).</span>
+      <span lang="tr"><b>Windows uyarı verirse:</b> Exe henüz imzalı olmadığı için Windows "Bilgisayarınız korundu" uyarısı gösterebilir.
+        <b>Ek bilgi → Yine de çalıştır</b> deyin. <i>Akıllı Uygulama Denetimi</i> engellerse uygulamayı aşağıdaki gibi kaynak koddan çalıştırın.</span>
+      <br><a href="https://github.com/ArslanEren-Dev/truck-tms/blob/main/docs/CODE_SIGNING.md"><span lang="en">Code signing policy</span><span lang="tr">Kod imzalama politikası</span></a>
+    </div>
+    <h3 style="margin-top:28px"><span lang="en">Run from source (Windows, macOS, Linux)</span><span lang="tr">Kaynak koddan çalıştırma (Windows, macOS, Linux)</span></h3>
+<pre class="code">git clone https://github.com/ArslanEren-Dev/truck-tms.git
+cd truck-tms
+python -m venv .venv
+.venv\Scripts\activate        # macOS/Linux: source .venv/bin/activate
+pip install -e .
+truck-tms</pre>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap" style="text-align:center">
+    <h2><span lang="en">Free and open source</span><span lang="tr">Ücretsiz ve açık kaynak</span></h2>
+    <p class="sub" style="margin:0 auto 26px"><span lang="en">MIT licensed. Bug reports, ideas and pull requests are welcome, and so are new languages.</span>
+      <span lang="tr">MIT lisanslı. Hata bildirimleri, fikirler, pull request'ler ve yeni dil çevirileri memnuniyetle karşılanır.</span></p>
+    <div class="cta" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a class="btn primary" href="https://github.com/ArslanEren-Dev/truck-tms/releases/latest" data-release><span lang="en">Download</span><span lang="tr">İndir</span></a>
+      <a class="btn" href="https://github.com/ArslanEren-Dev/truck-tms" data-github><span lang="en">Star on GitHub</span><span lang="tr">GitHub'da yıldız verin</span></a>
+      <a class="btn" href="https://github.com/ArslanEren-Dev/truck-tms/issues" data-issues><span lang="en">Report an issue</span><span lang="tr">Sorun bildirin</span></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <img src="logo.svg" alt="" width="24" height="24">
+    <span>Truck TMS · <span lang="en">MIT license</span><span lang="tr">MIT lisansı</span> ·
+      <span lang="en">made by</span><span lang="tr">geliştirici:</span> <a href="https://github.com/ArslanEren-Dev">ArslanEren-Dev</a></span>
+    <span class="spacer"></span>
+    <a href="https://github.com/ArslanEren-Dev/truck-tms/blob/main/docs/CODE_SIGNING.md"><span lang="en">Code signing policy</span><span lang="tr">Kod imzalama politikası</span></a>
+    <a href="https://github.com/ArslanEren-Dev/truck-tms" data-github>GitHub</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement;
+
+  // --- language: ?lang=tr, saved choice, or the browser language
+  function setLang(lang) {
+    root.setAttribute("data-lang", lang);
+    root.setAttribute("lang", lang);
+    document.querySelectorAll("[data-set-lang]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-set-lang") === lang));
+    });
+    try { localStorage.setItem("tms-lang", lang); } catch (e) {}
+    updateCaption();
+  }
+  var saved = null;
+  try { saved = localStorage.getItem("tms-lang"); } catch (e) {}
+  var fromUrl = new URLSearchParams(location.search).get("lang");
+  var initial = fromUrl || saved || ((navigator.language || "").toLowerCase().indexOf("tr") === 0 ? "tr" : "en");
+
+  // --- theme toggle (follows the system until the visitor chooses)
+  var themeSaved = null;
+  try { themeSaved = localStorage.getItem("tms-theme"); } catch (e) {}
+  if (themeSaved) root.setAttribute("data-theme", themeSaved);
+  document.getElementById("theme-btn").addEventListener("click", function () {
+    var dark = root.getAttribute("data-theme") === "dark" ||
+      (!root.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+    var next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("tms-theme", next); } catch (e) {}
+  });
+
+
+  // --- screenshot gallery
+  var captions = {
+    overview: { en: "Overview: this week's gross and miles, loads on the road, unpaid driver pay and reminders.", tr: "Genel Bakış: bu haftanın brütü ve mili, yoldaki yükler, ödenmemiş sürücü ücretleri ve hatırlatmalar." },
+    trucks: { en: "Trucks: plate or unit #, US makes, odometer, owner and a service-due warning.", tr: "Tırlar: plaka veya araç kodu, ABD markaları, sayaç, tır sahibi ve bakım uyarısı." },
+    loads: { en: "Loads: statement week, loaded/dead/total miles, gross, rate per mile and TONU.", tr: "Yükler: statement haftası, yüklü/boş/toplam mil, brüt, mil başına rate ve TONU." },
+    drivers: { en: "Drivers: CDL, pay type and the unpaid balance from statements.", tr: "Sürücüler: ehliyet, ödeme şekli ve statement'lardan gelen ödenmemiş bakiye." },
+    maintenance: { en: "Maintenance: service history with next-due date or odometer.", tr: "Bakım: sonraki bakım tarihi veya sayacıyla birlikte bakım geçmişi." },
+    dark_tr: { en: "The dark theme with the Turkish interface.", tr: "Koyu tema ve Türkçe arayüz." },
+    import: { en: "Import loads from Excel or CSV: columns are matched automatically, with a preview.", tr: "Excel veya CSV'den yük aktarma: sütunlar otomatik eşleştirilir, önizleme ile kontrol edilir." },
+    load_documents: { en: "Drag rate confirmations, BOLs and PODs onto a load; the type is recognised from the file name.", tr: "Rate confirmation, BOL ve POD'ları yüke sürükleyin; türü dosya adından tanınır." },
+    export: { en: "Export: choose what, which format, the folder and the file name.", tr: "Dışa aktarma: neyin, hangi biçimde, hangi klasöre ve hangi adla aktarılacağını seçin." },
+    splash: { en: "The start-up animation: when the truck reaches the end of the road, the app is ready.", tr: "Açılış animasyonu: tır yolun sonuna vardığında uygulama hazırdır." }
+  };
+  var current = "overview";
+  function updateCaption() {
+    var lang = root.getAttribute("data-lang");
+    document.getElementById("stage-cap").textContent = captions[current][lang];
+  }
+  document.querySelectorAll("[data-shot]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      current = b.getAttribute("data-shot");
+      document.querySelectorAll("[data-shot]").forEach(function (x) { x.setAttribute("aria-selected", String(x === b)); });
+      var img = document.getElementById("stage-img");
+      img.style.animation = "none"; void img.offsetWidth; img.style.animation = "";
+      img.src = "screenshots/" + current + ".png";
+      updateCaption();
+    });
+  });
+  document.querySelectorAll("[data-set-lang]").forEach(function (b) {
+    b.addEventListener("click", function () { setLang(b.getAttribute("data-set-lang")); });
+  });
+  setLang(initial === "tr" ? "tr" : "en");
+})();
+</script>
+</body>
+</html>
