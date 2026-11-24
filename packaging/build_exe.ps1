@@ -1,11 +1,11 @@
 # Builds dist\TruckTMS.exe: a single Windows executable that needs no Python installed.
-# Usage (from the project folder):  powershell -ExecutionPolicy Bypass -File build_exe.ps1
+# Usage (from the project folder):  powershell -ExecutionPolicy Bypass -File packaging\build_exe.ps1
 #
 # Parts of Qt the app does not use (QML, Quick, PDF, network, software OpenGL) are left out,
 # which makes the exe smaller and start faster.
 
 $ErrorActionPreference = "Stop"
-$root = $PSScriptRoot
+$root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 
 if (-not (Test-Path .venv)) { py -m venv .venv }

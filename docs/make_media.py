@@ -94,7 +94,7 @@ def screenshots() -> dict[str, Path]:
     from truck_tms.ui.trucks import TrucksTab
 
     tidy_status_bar()
-    window.resize(1360, 1340)  # tall enough for the cards, the charts and the recent loads
+    window.resize(1360, 1560)  # tall enough for the hero, the cards, today, the charts and the recent loads
     window.overview.refresh()  # start the count-up / chart animations, then wait for them to finish
     settle(1400)
     save(window, "overview")
@@ -113,6 +113,15 @@ def screenshots() -> dict[str, Path]:
             settle(1100)
         settle()
         save(window, name)
+        if cls is LoadsTab:  # the board view with the details panel open
+            loads_page = window.tabs.currentWidget()
+            loads_page.set_view("board")
+            loads_page.show_details(next(x for x in db.list_loads() if x.status == "in_transit").id)
+            settle(700)
+            save(window, "board")
+            loads_page.panel.close_panel()
+            loads_page.set_view("list")
+            settle(300)
 
     invoice = InvoiceDialog(db, db.list_invoices()[-2])
     full_size(invoice)

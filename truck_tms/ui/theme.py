@@ -46,7 +46,7 @@ TOKENS = {
         "success_bg": "#E6F4EA", "success_fg": "#1E7B34", "warning_bg": "#FFF3DF", "warning_fg": "#9A5A00",
         "danger_bg": "#FDECEC", "danger_fg": "#C62828", "info_bg": "#E3EEFC", "info_fg": "#1E63C6",
         "neutral_bg": "#EEF1F5", "neutral_fg": "#5F6B7A",
-        "accent2": "#5B9BF0", "series": "#1E63C6,#F5A623,#E8743B,#D63A3A,#8E1E1E,#7C5CC4",
+        "accent2": "#5B9BF0", "hero_end": "#4338CA", "series": "#1E63C6,#F5A623,#E8743B,#D63A3A,#8E1E1E,#7C5CC4",
     },
     "dark": {
         "bg": "#121417", "surface": "#181C21", "surface2": "#20252C", "border": "#2E353E",
@@ -59,7 +59,7 @@ TOKENS = {
         "success_bg": "#163322", "success_fg": "#6BD08A", "warning_bg": "#3A2B12", "warning_fg": "#F2B45A",
         "danger_bg": "#3A1F22", "danger_fg": "#FF8A80", "info_bg": "#172B4D", "info_fg": "#7DB0FF",
         "neutral_bg": "#262C34", "neutral_fg": "#A3ADB9",
-        "accent2": "#7DB0FF", "series": "#3B82F6,#F2B45A,#F08A55,#EF5350,#C2414B,#A78BFA",
+        "accent2": "#7DB0FF", "hero_end": "#312E81", "series": "#3B82F6,#F2B45A,#F08A55,#EF5350,#C2414B,#A78BFA",
     },
 }
 
@@ -115,7 +115,8 @@ def stylesheet(theme: str) -> str:
     t["chevron_up"] = asset_path(f"chevron_up_{theme}.svg").as_posix()
     qss = """
 QMainWindow, QDialog { background: @bg; }
-QWidget { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-size: 10pt; }
+QWidget { font-family: "Segoe UI Variable Text", "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+          font-size: 10pt; }
 QTabWidget::pane { border: 1px solid @border; border-radius: 10px; background: @bg; top: -1px; }
 QTabBar::tab { background: transparent; color: @muted; padding: 9px 16px; margin-right: 2px;
                border: none; border-bottom: 2px solid transparent; font-weight: 600; }
@@ -233,6 +234,36 @@ QLabel[role="metric"] { background: @surface; border: 1px solid @border; border-
 /* --- empty state --- */
 QLabel[role="emptytitle"] { font-size: 13pt; font-weight: 700; color: @text; }
 QLabel[role="emptyhint"] { color: @muted; font-size: 10pt; }
+
+/* --- overview hero band (glass buttons on a gradient) --- */
+QFrame#Hero QLabel { color: #FFFFFF; background: transparent; }
+QLabel[role="herotitle"] { font-size: 20pt; font-weight: 800; }
+QLabel[role="herosub"] { font-size: 10pt; color: rgba(255, 255, 255, 0.82); }
+QFrame#Hero QPushButton { background: rgba(255, 255, 255, 0.14); color: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.30); }
+QFrame#Hero QPushButton:hover { background: rgba(255, 255, 255, 0.24); border-color: rgba(255, 255, 255, 0.55); }
+QFrame#Hero QPushButton:pressed { background: rgba(255, 255, 255, 0.10); }
+QFrame#Hero QPushButton[variant="primary"] { background: #FFFFFF; color: @accent; border: 1px solid #FFFFFF; }
+QFrame#Hero QPushButton[variant="primary"]:hover { background: #EEF3FF; }
+QLabel[role="delta"] { border-radius: 8px; padding: 1px 7px; font-size: 8.5pt; font-weight: 700; }
+QLabel[role="delta"][tone="success"] { background: @success_bg; color: @success_fg; }
+QLabel[role="delta"][tone="danger"] { background: @danger_bg; color: @danger_fg; }
+QLabel[role="delta"][tone="neutral"] { background: @neutral_bg; color: @neutral_fg; }
+QLabel[role="step"] { background: @surface2; color: @muted; border-radius: 13px; font-weight: 800; }
+QLabel[role="step"][done="true"] { background: @success_bg; color: @success_fg; }
+
+/* --- load board and detail panel --- */
+QFrame#BoardColumn { background: @surface; border: 1px solid @border; border-radius: 12px; }
+QLabel[role="colcount"] { background: @surface2; color: @muted; border-radius: 9px; padding: 0 7px; font-weight: 700; }
+QListWidget#CardList { background: transparent; border: none; outline: 0; }
+QFrame#DetailPanel { background: @card; border: 1px solid @border; border-radius: 14px; }
+QLabel[role="detailtitle"] { font-size: 15pt; font-weight: 800; color: @text; }
+QPushButton[segment="true"] { border-radius: 0; padding: 6px 12px; }
+QPushButton[segment="true"]:checked { background: @select; color: @accent; border-color: @accent; }
+QPushButton[segment="first"] { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+QPushButton[segment="last"] { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -1px; }
+QPushButton[segment="first"]:checked, QPushButton[segment="last"]:checked { background: @select; color: @accent;
+    border-color: @accent; }
 
 /* --- toast notifications --- */
 QFrame#Toast { background: @toast; border-radius: 10px; }
@@ -488,18 +519,22 @@ def slide_in(widget: QWidget, distance: int = 28, duration: int = 240) -> None:
 
 
 def count_up(label, value: float, fmt, duration: int = 900) -> QVariantAnimation:
-    """Animate a number label from 0 to ``value``; ``fmt(number) -> str`` formats each frame."""
+    """Animate a number label to ``value``: from 0 the first time, later gliding from the number it shows.
+
+    ``fmt(number) -> str`` formats each frame."""
     old = getattr(label, "_count_anim", None)
     if old is not None:
         old.stop()
+    start = float(getattr(label, "_count_value", 0.0))
     anim = QVariantAnimation(label)
-    anim.setDuration(duration)
-    anim.setStartValue(0.0)
+    anim.setDuration(duration if start == 0 else max(350, duration // 2))
+    anim.setStartValue(start)
     anim.setEndValue(float(value))
     anim.setEasingCurve(QEasingCurve.Type.OutCubic)
     anim.valueChanged.connect(lambda v: label.setText(fmt(v)))
     anim.finished.connect(lambda: label.setText(fmt(value)))
     label._count_anim = anim
-    label.setText(fmt(0))
+    label._count_value = float(value)
+    label.setText(fmt(start))
     anim.start()
     return anim

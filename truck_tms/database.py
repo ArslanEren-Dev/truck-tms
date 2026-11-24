@@ -101,6 +101,7 @@ DEFAULT_SETTINGS = {
     "invoice_prefix": "INV-",
     "invoice_terms": "30",
     "check_updates": "1",
+    "loads_view": "list",  # "list" or "board" on the Loads page
 }
 
 TABLES = """

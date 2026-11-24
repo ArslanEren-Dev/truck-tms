@@ -33,6 +33,7 @@ from .dialog_kit import DialogPage
 from .export import default_export_folder, html_to_pdf, report_written, safe_name
 from .theme import token
 from .widgets import (
+    STATUS_TONES,
     NumberEdit,
     OptionalDateEdit,
     button,
@@ -322,7 +323,7 @@ class InvoicesTab(CrudTab):
                 (money(inv.balance, cur), inv.balance),
                 status_badge("inv.status.", status),
                 (t("inv.n_days", n=late) if late else "", late),
-            ]))
+            ], STATUS_TONES.get(status, "neutral")))
         return rows
 
     def has_filters(self) -> bool:

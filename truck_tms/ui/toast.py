@@ -8,6 +8,7 @@ from PySide6.QtCore import QEasingCurve, QPoint, QTimer, QVariantAnimation, Qt
 from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 
 from .theme import icon
+from .visuals import AnimatedCheck
 
 MARGIN = 22
 GAP = 10
@@ -32,8 +33,11 @@ class Toast(QFrame):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(14, 10, 14, 10)
         layout.setSpacing(10)
-        mark = QLabel()
-        mark.setPixmap(icon(icon_name, color).pixmap(18, 18))
+        if tone == "success":
+            mark = AnimatedCheck(color)  # the check mark draws itself
+        else:
+            mark = QLabel()
+            mark.setPixmap(icon(icon_name, color).pixmap(18, 18))
         label = QLabel(text)
         label.setWordWrap(True)
         label.setMaximumWidth(380)

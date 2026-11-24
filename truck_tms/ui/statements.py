@@ -31,6 +31,7 @@ from .dialog_kit import DialogPage, Section
 from .export import STATEMENT_FORMATS, export_with_dialog, statement_file_stem, write_statement_files
 from .theme import warning_color
 from .widgets import (
+    STATUS_TONES,
     NumberEdit,
     OptionalDateEdit,
     button,
@@ -428,7 +429,7 @@ class StatementsTab(CrudTab):
                 (money(balance, c), balance, warn if balance > 0.005 else None),
                 m(s.owner_payout),
                 status_badge("stmt_status.", statement.status),
-            ]))
+            ], STATUS_TONES.get(statement.status, "neutral")))
         return rows
 
     def open_dialog(self, record_id):

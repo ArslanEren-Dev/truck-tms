@@ -4,19 +4,22 @@ from __future__ import annotations
 
 import os
 from datetime import date, datetime
+from html import escape
 from pathlib import Path
 from collections.abc import Callable
 
 from PySide6.QtCore import QTimer, QUrl
-from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
-from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QPushButton
+from PySide6.QtGui import QAction, QDesktopServices, QKeySequence, QShortcut
+from PySide6.QtWidgets import QDialog, QFileDialog, QLabel, QMainWindow, QPushButton
 
 from .. import PROJECT_URL, WEBSITE_URL, __version__
 from ..database import Database, ValidationError, backups_folder
 from ..i18n import set_language, t
 from ..updates import Release, check_due, is_newer
+from .base import CrudTab
 from .compliance_tab import ComplianceTab
 from .dashboard import OverviewTab
+from .driver_pay import DriverPayTab
 from .drivers import DriversTab
 from .expenses import ExpensesTab
 from .ifta_tab import IftaTab
@@ -24,6 +27,7 @@ from .invoices import InvoicesTab
 from .loads import LoadsTab
 from .maintenance import MaintenanceTab
 from .nav import NavTabs
+from .quick_search import QuickSearch
 from .reports import ReportsTab
 from .settings import SettingsTab
 from .statements import StatementsTab
@@ -57,6 +61,7 @@ class MainWindow(QMainWindow):
         self.saved_timer.timeout.connect(self._check_saved)
         self.saved_timer.start()
         self.build()
+        self._make_shortcuts()
         settings = db.get_settings()
         if (check_updates and settings["check_updates"] == "1" and check_due(settings.get("update_checked"))
                 and not os.environ.get("TRUCK_TMS_NO_UPDATE_CHECK")):
@@ -82,6 +87,7 @@ class MainWindow(QMainWindow):
             (LoadsTab(self.db), "tab.loads", "layers"),
             (InvoicesTab(self.db), "tab.invoices", "receipt"),
             (StatementsTab(self.db), "tab.statements", "file"),
+            (DriverPayTab(self.db), "tab.driver_pay", "dollar"),
             (MaintenanceTab(self.db), "tab.maintenance", "wrench"),
             (ExpensesTab(self.db), "tab.expenses", "wallet"),
             (ComplianceTab(self.db), "tab.compliance", "shield"),
@@ -94,6 +100,7 @@ class MainWindow(QMainWindow):
             lambda: QTimer.singleShot(0, lambda: self.build(self.tabs.count() - 1))
         )
         pages.append((settings_tab, "tab.settings", "sliders"))
+        self.page_info = [(t(key), icon_name, isinstance(page, CrudTab)) for page, key, icon_name in pages]
         for page, key, icon_name in pages:
             self.tabs.addTab(page, t(key), icon_name, t("page." + key.split(".")[1]))
 
@@ -121,7 +128,19 @@ class MainWindow(QMainWindow):
         return -1
 
     def quick_action(self, action: str) -> None:
-        """Buttons on the overview page: jump to the right page and open its "new" dialog."""
+        """Buttons on the overview page: jump to the right page and open its "new" dialog.
+
+        ``load:<id>`` shows that load's details; ``invoice:<id>`` opens the load's invoice."""
+        if action.startswith(("load:", "invoice:")):
+            kind, load_id = action.split(":")
+            index = self.page_index(LoadsTab)
+            self.tabs.setCurrentIndex(index)
+            page = self.tabs.widget(index)
+            if kind == "invoice":
+                page.invoice_selected(int(load_id))
+            else:
+                page.show_details(int(load_id))
+            return
         target = {"new_load": LoadsTab, "new_truck": TrucksTab, "new_driver": DriversTab,
                   "new_statement": StatementsTab, "new_invoice": InvoicesTab,
                   "compliance": ComplianceTab}[action]
@@ -131,6 +150,64 @@ class MainWindow(QMainWindow):
         index = self.page_index(target)
         self.tabs.setCurrentIndex(index)
         self.tabs.widget(index)._open(None)
+
+    # -------------------------------------------------------------- keyboard
+    def _make_shortcuts(self) -> None:
+        """Window-wide keys that are not in a menu (menus are rebuilt, these stay)."""
+        keys = [(f"Ctrl+{n}", lambda n=n: self.go_to_page(n - 1)) for n in range(1, 10)]
+        keys += [("Ctrl+F", self.focus_search), ("F5", self.reload_page)]
+        self.shortcuts = []
+        for key, slot in keys:
+            shortcut = QShortcut(QKeySequence(key), self)
+            shortcut.activated.connect(slot)
+            self.shortcuts.append(shortcut)
+
+    def go_to_page(self, index: int) -> None:
+        if 0 <= index < self.tabs.count():
+            self.tabs.setCurrentIndex(index)
+
+    def focus_search(self) -> None:
+        page = self.tabs.currentWidget()
+        if isinstance(page, CrudTab):
+            page.focus_search()
+
+    def reload_page(self) -> None:
+        page = self.tabs.currentWidget()
+        if hasattr(page, "refresh"):
+            page.refresh()
+
+    def new_record(self) -> None:
+        """Ctrl+N: the "Add" dialog of the current page (a new load from the overview)."""
+        page = self.tabs.currentWidget()
+        if isinstance(page, CrudTab):
+            page._open(None)
+        elif page is self.overview:
+            self.quick_action("new_load")
+
+    def quick_search(self) -> None:
+        dialog = QuickSearch(self.db, self.page_info, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted or not dialog.choice:
+            return
+        self.run_choice(dialog.choice)
+
+    def run_choice(self, choice: tuple) -> None:
+        """Carry out what was picked in the quick search."""
+        if choice[0] == "page":
+            self.go_to_page(choice[1])
+        elif choice[0] == "new":
+            self.go_to_page(choice[1])
+            self.new_record()
+        elif choice[0] == "open":
+            kind, record_id = choice[1], choice[2]
+            index = self.page_index({"load": LoadsTab, "truck": TrucksTab, "driver": DriversTab,
+                                     "invoice": InvoicesTab}[kind])
+            self.tabs.setCurrentIndex(index)
+            self.tabs.widget(index)._open(record_id)
+
+    def show_shortcuts(self) -> None:
+        rows = "".join(f"<tr><td style='padding:2px 18px 2px 0'><b>{escape(key)}</b></td><td>{escape(text)}</td></tr>"
+                       for key, text in (line.split("\t") for line in t("shortcuts.text").splitlines()))
+        show_info(self, f"<table>{rows}</table>")
 
     def import_loads(self) -> None:
         index = self.page_index(LoadsTab)
@@ -147,11 +224,13 @@ class MainWindow(QMainWindow):
         bar = self.menuBar()
         bar.clear()
         file_menu = bar.addMenu(t("menu.file"))
-        self._action(file_menu, t("menu.new"), self.new_file, QKeySequence.StandardKey.New, "file")
+        self._action(file_menu, t("menu.new"), self.new_file, QKeySequence("Ctrl+Shift+N"), "file")
         self._action(file_menu, t("menu.open"), self.open_file, QKeySequence.StandardKey.Open, "folder")
         self._action(file_menu, t("menu.save"), self.save_now, QKeySequence.StandardKey.Save, "save")
         self._action(file_menu, t("menu.backup"), self.save_backup, QKeySequence("Ctrl+Shift+S"), "export")
         file_menu.addSeparator()
+        self._action(file_menu, t("menu.quick_search"), self.quick_search, QKeySequence("Ctrl+K"), "search")
+        self._action(file_menu, t("menu.new_record"), self.new_record, QKeySequence("Ctrl+N"), "plus")
         self._action(file_menu, t("menu.import"), self.import_loads, QKeySequence("Ctrl+I"), "upload")
         file_menu.addSeparator()
         self._action(file_menu, t("menu.folder"), self.open_data_folder, None, "folder")
@@ -162,6 +241,7 @@ class MainWindow(QMainWindow):
         self._action(help_menu, t("menu.github"), lambda: self.open_url(PROJECT_URL), None, "folder")
         self._action(help_menu, t("menu.report_issue"), lambda: self.open_url(PROJECT_URL + "/issues"), None, "edit")
         help_menu.addSeparator()
+        self._action(help_menu, t("menu.shortcuts"), self.show_shortcuts, QKeySequence("F1"))
         self._action(help_menu, t("menu.check_updates"), self.check_for_updates, None, "bell")
         self._action(help_menu, t("menu.about"), self.show_about)
 

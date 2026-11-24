@@ -7,11 +7,13 @@ from PySide6.QtWidgets import QDialog, QLineEdit, QPlainTextEdit, QWidget
 from ..database import DRIVER_STATUSES, PAY_TYPES, Database, Driver, ValidationError
 from ..i18n import t
 from ..printout import money
-from ..statement import driver_balances, percent
+from ..profit import pay_description
+from ..statement import driver_balances
 from .base import CrudTab
 from .dialog_kit import DialogPage
 from .theme import warning_color
 from .widgets import (
+    STATUS_TONES,
     NumberEdit,
     OptionalDateEdit,
     buttons_box,
@@ -22,17 +24,6 @@ from .widgets import (
     show_error,
     status_badge,
 )
-
-
-def pay_description(driver: Driver, currency: str, unit: str) -> str:
-    if driver.pay_rate is None:
-        return ""
-    rate = f"{driver.pay_rate:g}"
-    if driver.pay_type == "percent":
-        return t("pay.desc_percent", rate=percent(driver.pay_rate))
-    if driver.pay_type == "per_mile":
-        return t("pay.desc_per_mile", amount=f"{currency}{rate}", unit=t("unit." + unit))
-    return t("pay.desc_weekly", amount=money(driver.pay_rate, currency))
 
 
 class DriverDialog(QDialog):
@@ -139,7 +130,7 @@ class DriversTab(CrudTab):
                 (money(balance, s["currency"]) if balance else "", balance,
                  warning_color(s["theme"]) if balance > 0 else None),
                 status_badge("status.", d.status),
-            ]))
+            ], STATUS_TONES.get(d.status, "neutral")))
         return rows
 
     def open_dialog(self, record_id):

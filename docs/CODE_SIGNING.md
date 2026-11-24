@@ -2,9 +2,10 @@
 
 *[Türkçe özet aşağıda](#türkçe-özet)*
 
-> **Status:** Truck TMS has applied to the [SignPath Foundation](https://signpath.org/) open-source program, and the application is under review.
-> Until it is approved, `TruckTMS.exe` releases are **not code-signed**.
-> Once approved, Windows releases will be signed as described below and this notice will be replaced by:
+> **Status:** Truck TMS applied to the [SignPath Foundation](https://signpath.org/) open-source program in November 2026.
+> The application **has not been approved yet**, because the project does not have enough downloads and public visibility
+> so far. We plan to reapply once it has more users. Until then, `TruckTMS.exe` releases are **not code-signed**.
+> Once a certificate is issued, Windows releases will be signed as described below and this notice will be replaced by:
 > *Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).*
 
 ## What is signed
@@ -70,7 +71,8 @@ systems unless the user specifically requests it.
 
 ## Türkçe özet
 
-- **Durum:** [SignPath Foundation](https://signpath.org/) açık kaynak programına başvuru yapıldı ve inceleniyor. Başvuru onaylanana kadar
+- **Durum:** [SignPath Foundation](https://signpath.org/) açık kaynak programına Kasım 2026'da başvuruldu. Proje henüz yeterli indirme ve
+  bilinirliğe ulaşmadığı için başvuru **şimdilik onaylanmadı**; kullanıcı sayısı arttığında yeniden başvurulacak. O zamana kadar
   `TruckTMS.exe` **imzasızdır**.
 - **İmzalanan dosya:** Yalnızca `TruckTMS.exe`. Bu dosya kişisel bir bilgisayarda değil, her zaman bu repodaki koddan
   GitHub Actions tarafından derlenir. İçindeki Qt, Python ve Microsoft kütüphaneleri zaten kendi üreticileri tarafından imzalıdır.

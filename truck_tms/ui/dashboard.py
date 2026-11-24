@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
-from datetime import date, timedelta
+from html import escape
+from datetime import date, datetime, timedelta
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QDate, QLocale, Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QPushButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -23,10 +25,12 @@ from ..i18n import t
 from ..invoicing import compute_receivables
 from ..printout import money, number
 from ..statement import driver_balances
+from ..today import compute_today, onboarding_steps
 from ..weeks import week_label, week_start
 from .charts import BarChart, DonutChart, LineChart, RankChart, compact
 from .theme import count_up, icon, token
-from .widgets import button, fill_table, make_table, status_badge
+from .visuals import HeroBand, Sparkline, stagger_in
+from .widgets import STATUS_TONES, button, fill_table, make_table, status_badge
 
 IN_PROGRESS = ("dispatched", "in_transit")
 LOAD_FIELDS = {f.name for f in fields(Load)}
@@ -114,6 +118,7 @@ class Trends:
 
     weeks: list[str]                 # week start dates, oldest first
     gross: list[float]               # gross per week
+    miles: list[float]               # total miles per week
     rate_per_mile: list[float]       # gross / total miles per week (0 when there were no miles)
     top_brokers: list[tuple[str, float]]  # (broker, gross) of the last 90 days, biggest first
     expenses: list[tuple[str, float]] = field(default_factory=list)  # (category, amount), last 90 days
@@ -149,6 +154,7 @@ def compute_trends(db: Database, weeks: int = 8, today: date | None = None, brok
     return Trends(
         weeks=starts,
         gross=[round(gross[s], 2) for s in starts],
+        miles=[round(miles[s], 1) for s in starts],
         rate_per_mile=[round(gross[s] / miles[s], 2) if miles[s] else 0.0 for s in starts],
         top_brokers=sorted(brokers.items(), key=lambda kv: -kv[1])[:top],
         expenses=sorted(((k, round(v, 2)) for k, v in spent.items() if v > 0), key=lambda kv: -kv[1]),
@@ -162,8 +168,23 @@ def card() -> QFrame:
     return frame
 
 
+def delta_text(values: list[float]) -> tuple[str, str] | None:
+    """('▲ 12%', 'success') comparing the last value with the one before; None without a base."""
+    if len(values) < 2 or not values[-2]:
+        return None
+    change = (values[-1] - values[-2]) / abs(values[-2]) * 100
+    if abs(change) < 0.5:
+        return "● 0%", "neutral"
+    return (f"▲ {change:.0f}%", "success") if change > 0 else (f"▼ {abs(change):.0f}%", "danger")
+
+
+def greeting(now: datetime | None = None) -> str:
+    hour = (now or datetime.now()).hour
+    return t("dash.morning" if 5 <= hour < 12 else "dash.afternoon" if hour < 18 else "dash.evening")
+
+
 class StatCard(QFrame):
-    """A key number with an icon; the number counts up when it changes."""
+    """A key number with an icon; the number counts up when it changes, with an optional trend line."""
 
     def __init__(self, title: str, icon_name: str, parent: QWidget | None = None):
         super().__init__(parent)
@@ -180,11 +201,22 @@ class StatCard(QFrame):
         self.value.setProperty("role", "kpi")
         self.sub = QLabel()
         self.sub.setProperty("role", "kpisub")
+        self.delta = QLabel()
+        self.delta.setProperty("role", "delta")
+        self.delta.hide()
+        self.spark = Sparkline()
+        self.spark.hide()
+        value_row = QHBoxLayout()
+        value_row.setSpacing(8)
+        value_row.addWidget(self.value)
+        value_row.addWidget(self.delta, 0, Qt.AlignmentFlag.AlignVCenter)
+        value_row.addStretch(1)
         text = QVBoxLayout()
         text.setSpacing(0)
         text.addWidget(self.title)
-        text.addWidget(self.value)
+        text.addLayout(value_row)
         text.addWidget(self.sub)
+        text.addWidget(self.spark)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(14)
@@ -205,6 +237,19 @@ class StatCard(QFrame):
             count_up(self.value, value, fmt)
         else:
             self.value.setText(fmt(value))
+            self.value._count_value = float(value)
+
+    def set_trend(self, values: list[float], animate: bool = True) -> None:
+        """Weekly values, oldest first: a sparkline plus the change against the week before."""
+        self.spark.set_values(values, animate)
+        delta = delta_text(values)
+        self.delta.setVisible(delta is not None)
+        if delta:
+            self.delta.setText(delta[0])
+            self.delta.setProperty("tone", delta[1])
+            self.delta.setToolTip(t("dash.vs_last_week"))
+            self.delta.style().unpolish(self.delta)
+            self.delta.style().polish(self.delta)
 
 
 class OverviewTab(QWidget):
@@ -216,7 +261,12 @@ class OverviewTab(QWidget):
         self.db = db
         self.overview: Overview | None = None
 
-        # quick actions
+        # hero band: greeting, date and the quick actions on a gradient
+        self.hero = HeroBand()
+        self.hello = QLabel()
+        self.hello.setProperty("role", "herotitle")
+        self.today_label = QLabel()
+        self.today_label.setProperty("role", "herosub")
         actions = QHBoxLayout()
         actions.setSpacing(8)
         for key, text_key, icon_name, variant in (
@@ -227,12 +277,35 @@ class OverviewTab(QWidget):
             ("new_invoice", "dash.new_invoice", "receipt", None),
         ):
             btn = button(t(text_key), variant, icon_name)
+            if variant == "primary":  # white button on the gradient: the icon takes the accent colour
+                btn.setIcon(icon(icon_name, token("accent")))
             btn.clicked.connect(lambda _=False, k=key: self.action_requested.emit(k))
             actions.addWidget(btn)
         actions.addStretch(1)
         self.week = QLabel()
-        self.week.setProperty("role", "kpisub")
+        self.week.setProperty("role", "herosub")
         actions.addWidget(self.week)
+        hero_layout = QVBoxLayout(self.hero)
+        hero_layout.setContentsMargins(24, 20, 24, 18)
+        hero_layout.setSpacing(4)
+        hero_layout.addWidget(self.hello)
+        hero_layout.addWidget(self.today_label)
+        hero_layout.addSpacing(10)
+        hero_layout.addLayout(actions)
+
+        # getting started (only while the file is still empty)
+        self.onboarding = card()
+        self.onboarding.setProperty("lift", False)
+        self.steps_box = QVBoxLayout(self.onboarding)
+        self.steps_box.setContentsMargins(18, 14, 18, 14)
+        self.steps_box.setSpacing(8)
+
+        # today: pickups, deliveries, late loads, loads to invoice
+        self.today_card = card()
+        self.today_card.setProperty("lift", False)
+        self.today_box = QVBoxLayout(self.today_card)
+        self.today_box.setContentsMargins(16, 14, 16, 14)
+        self.today_box.setSpacing(6)
 
         # key numbers
         self.cards = {
@@ -298,19 +371,22 @@ class OverviewTab(QWidget):
         self.reminder_box.setContentsMargins(16, 14, 16, 14)
         self.reminder_box.setSpacing(8)
 
-        bottom = QHBoxLayout()
-        bottom.setSpacing(12)
-        bottom.addWidget(recent_card, 3)
-        bottom.addWidget(reminders_card, 2)
+        middle = QHBoxLayout()
+        middle.setSpacing(12)
+        middle.addWidget(self.today_card, 3)
+        middle.addWidget(reminders_card, 2)
 
         inner = QWidget()
         layout = QVBoxLayout(inner)
         layout.setContentsMargins(8, 4, 8, 8)
         layout.setSpacing(14)
-        layout.addLayout(actions)
+        layout.addWidget(self.hero)
+        layout.addWidget(self.onboarding)
         layout.addLayout(grid)
+        layout.addLayout(middle)
         layout.addLayout(charts)
-        layout.addLayout(bottom, 1)
+        layout.addWidget(recent_card, 1)
+        self.chart_cards = [charts.itemAt(i).widget() for i in range(charts.count())]
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -325,6 +401,9 @@ class OverviewTab(QWidget):
         cur, unit = s["currency"], s["distance_unit"]
         o = self.overview = compute_overview(self.db)
         self.week.setText(t("dash.week", week=week_label(o.week_start)))
+        company = s.get("company_name", "").strip()
+        self.hello.setText(greeting() + (f", {company}" if company else ""))
+        self.today_label.setText(QLocale().toString(QDate.currentDate(), QLocale.FormatType.LongFormat))
         c = self.cards
         c["gross"].set_value(o.week_gross, lambda v: money(v, cur), t("dash.loads_count", n=o.week_loads), animate)
         c["miles"].set_value(o.week_miles, lambda v: f"{number(v)} {unit}", week_label(o.week_start), animate)
@@ -349,6 +428,8 @@ class OverviewTab(QWidget):
         self.gross_chart.fmt = lambda v: money(v, cur)
         self.gross_chart.axis_fmt = lambda v: cur + compact(v)
         self.gross_chart.set_data(week_labels, trends.gross, animate)
+        c["gross"].set_trend(trends.gross, animate)
+        c["miles"].set_trend(trends.miles, animate)
         self.rpm_chart.fmt = lambda v: f"{money(v, cur)}/{unit}"
         self.rpm_chart.axis_fmt = lambda v: f"{cur}{v:.2f}"
         self.rpm_chart.set_data(week_labels, trends.rate_per_mile, animate)
@@ -368,10 +449,88 @@ class OverviewTab(QWidget):
                 trucks.get(load.truck_id, "—"),
                 (money(load.gross, cur), load.gross),
                 status_badge("status.", load.status),
-            ])
+            ], STATUS_TONES.get(load.status, "neutral"))
             for load in loads
         ])
         self._fill_reminders(o)
+        self._fill_today()
+        self._fill_onboarding()
+        if animate:
+            stagger_in(list(self.cards.values()) + self.chart_cards)
+
+    def _clear(self, box: QVBoxLayout) -> None:
+        while box.count():
+            item = box.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+            elif item.layout():
+                self._clear(item.layout())
+
+    def _fill_today(self) -> None:
+        self._clear(self.today_box)
+        title = QLabel(t("today.title"))
+        title.setProperty("role", "section")
+        self.today_box.addWidget(title)
+        items = compute_today(self.db)
+        if not items:
+            calm = QLabel(t("today.nothing"))
+            calm.setProperty("role", "kpisub")
+            calm.setWordWrap(True)
+            self.today_box.addWidget(calm)
+        icons = {"pickup": "upload", "delivery": "check", "late": "alert", "invoice": "receipt"}
+        for item in items:
+            row = QHBoxLayout()
+            row.setSpacing(10)
+            mark = QLabel()
+            mark.setPixmap(icon(icons[item.kind], token(f"{item.tone}_fg")).pixmap(18, 18))
+            text = QLabel(f"<b>{escape(item.title)}</b><br>"
+                          f"<span style='color:{token('muted')}'>{escape(item.detail)}</span>")
+            go = QPushButton(t("today.invoice_btn") if item.kind == "invoice" else t("today.open"))
+            go.setProperty("noLift", True)
+            go.setCursor(Qt.CursorShape.PointingHandCursor)
+            action = f"{'invoice' if item.kind == 'invoice' else 'load'}:{item.load_id}"
+            go.clicked.connect(lambda _=False, a=action: self.action_requested.emit(a))
+            row.addWidget(mark, 0, Qt.AlignmentFlag.AlignTop)
+            row.addWidget(text, 1)
+            row.addWidget(go, 0, Qt.AlignmentFlag.AlignVCenter)
+            holder = QWidget()
+            holder.setLayout(row)
+            self.today_box.addWidget(holder)
+        self.today_box.addStretch(1)
+
+    def _fill_onboarding(self) -> None:
+        steps = onboarding_steps(self.db)
+        self.onboarding.setVisible(not all(done for _, done in steps))
+        if not self.onboarding.isVisibleTo(self):
+            return
+        self._clear(self.steps_box)
+        title = QLabel(t("start.title"))
+        title.setProperty("role", "section")
+        hint = QLabel(t("start.hint"))
+        hint.setProperty("role", "kpisub")
+        self.steps_box.addWidget(title)
+        self.steps_box.addWidget(hint)
+        actions = {"truck": "new_truck", "driver": "new_driver", "load": "new_load"}
+        for n, (step, done) in enumerate(steps, 1):
+            row = QHBoxLayout()
+            badge = QLabel("✓" if done else str(n))
+            badge.setProperty("role", "step")
+            badge.setProperty("done", "true" if done else "false")
+            badge.setFixedSize(26, 26)
+            badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label = QLabel(t(f"start.{step}"))
+            if done:
+                label.setProperty("role", "kpisub")
+            row.addWidget(badge)
+            row.addWidget(label, 1)
+            if not done:
+                go = button(t(f"start.{step}_btn"), "primary" if n == next(
+                    i for i, (_, d) in enumerate(steps, 1) if not d) else None, "plus")
+                go.clicked.connect(lambda _=False, a=actions[step]: self.action_requested.emit(a))
+                row.addWidget(go)
+            holder = QWidget()
+            holder.setLayout(row)
+            self.steps_box.addWidget(holder)
 
     def _fill_reminders(self, o: Overview) -> None:
         while self.reminder_box.count():

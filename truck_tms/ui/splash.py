@@ -18,6 +18,19 @@ from ..i18n import t
 WIDTH, HEIGHT = 620, 360
 
 
+def _mix(a: str, b: str, k: float) -> QColor:
+    """Colour between ``a`` (k=0) and ``b`` (k=1)."""
+    ca, cb = QColor(a), QColor(b)
+    return QColor(int(ca.red() + (cb.red() - ca.red()) * k), int(ca.green() + (cb.green() - ca.green()) * k),
+                  int(ca.blue() + (cb.blue() - ca.blue()) * k))
+
+
+STARS = [((37 * i) % WIDTH, 18 + (53 * i) % 150) for i in range(1, 36)]
+# (x, width, height) of the buildings behind the hills
+SKYLINE = [(150, 26, 52), (180, 18, 78), (202, 30, 40), (236, 22, 96), (262, 34, 60), (300, 20, 84),
+           (324, 28, 46), (356, 24, 70)]
+
+
 def road_path() -> QPainterPath:
     path = QPainterPath(QPointF(40, 262))
     path.cubicTo(QPointF(140, 262), QPointF(170, 196), QPointF(270, 206))
@@ -77,12 +90,40 @@ class SplashScreen(QWidget):
         p.end()
 
     def _background(self, p: QPainter) -> None:
-        grad = QLinearGradient(0, 0, WIDTH, HEIGHT)
-        grad.setColorAt(0, QColor("#1E63C6"))
-        grad.setColorAt(1, QColor("#0B1F3F"))
+        """Dusk turns into night while loading: the sun sets, stars come out, city windows light up."""
+        k = min(max(self.progress, 0.0), 1.0)
+        sky = QLinearGradient(0, 0, 0, HEIGHT)
+        sky.setColorAt(0, _mix("#1E63C6", "#0A1430", k))
+        sky.setColorAt(0.75, _mix("#F59E5B", "#1B2A55", k))
         p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(grad)
+        p.setBrush(sky)
         p.drawRoundedRect(QRectF(0, 0, WIDTH, HEIGHT), 22, 22)
+        # stars fade in
+        for i, (x, y) in enumerate(STARS):
+            alpha = int(max(0.0, k * 1.6 - 0.4 - (i % 5) * 0.05) * 200)
+            if alpha > 0:
+                p.setBrush(QColor(255, 255, 255, min(alpha, 200)))
+                p.drawEllipse(QPointF(x, y), 1.2 + (i % 3) * 0.4, 1.2 + (i % 3) * 0.4)
+        # the sun goes down, the moon comes up
+        sun_y = 150 + k * 110
+        p.setBrush(QColor(255, 196, 92, int(230 * (1 - k))))
+        p.drawEllipse(QPointF(470, sun_y), 34, 34)
+        moon = QColor(244, 246, 255, int(230 * k))
+        p.setBrush(moon)
+        p.drawEllipse(QPointF(520, 150 - k * 60), 16, 16)
+        p.setBrush(_mix("#1E63C6", "#0A1430", k))
+        p.drawEllipse(QPointF(527, 145 - k * 60), 14, 14)
+        # city skyline with windows that light up one by one
+        base = 236
+        for i, (x, w, h) in enumerate(SKYLINE):
+            p.setBrush(QColor(8, 16, 36, 150 + int(70 * k)))
+            p.drawRect(QRectF(x, base - h, w, h))
+            for j in range(int(h // 14)):
+                for col in range(int(w // 10)):
+                    seed = (i * 7 + j * 3 + col * 5) % 11 / 11
+                    if seed < k * 0.9:
+                        p.setBrush(QColor(255, 214, 120, 190))
+                        p.drawRect(QRectF(x + 3 + col * 10, base - h + 6 + j * 14, 4, 5))
         # distant hills
         p.setBrush(QColor(255, 255, 255, 14))
         hills = QPainterPath(QPointF(0, 250))

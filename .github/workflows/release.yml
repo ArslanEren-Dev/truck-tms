@@ -1,6 +1,6 @@
 name: release
 
-# Builds TruckTMS.exe on GitHub's own Windows machine whenever a release is published
+# Builds TruckTMS.exe and the TruckTMS-Setup.exe installer on GitHub's own Windows machine whenever a release is published
 # (Releases → Draft a new release → Publish release), tests it, and attaches it to that release.
 # "Run workflow" on the Actions tab builds the exe without a release (download it from the run's Artifacts).
 #
@@ -52,7 +52,7 @@ jobs:
           .\.venv\Scripts\python -m pytest -q
 
       - name: Build TruckTMS.exe
-        run: ./build_exe.ps1
+        run: ./packaging/build_exe.ps1
 
       # ---------------------------------------------------------------- code signing
       # Every Qt/Python DLL inside the exe is already signed by its vendor; only TruckTMS.exe needs a signature.
@@ -92,11 +92,33 @@ jobs:
           Get-Content (Join-Path $log "self_test.log") -Encoding utf8
           if ($p.ExitCode -ne 0) { throw "Self-test failed with exit code $($p.ExitCode)" }
 
-      - name: Checksum
+      - name: Build the installer
         run: |
-          $hash = (Get-FileHash dist/TruckTMS.exe -Algorithm SHA256).Hash.ToLower()
-          "$hash  TruckTMS.exe" | Set-Content dist/TruckTMS.exe.sha256 -Encoding ascii
-          Get-Content dist/TruckTMS.exe.sha256
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          ./packaging/build_installer.ps1
+
+      - name: Test the installer (silent install, self-test, uninstall)
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP "tms-install"
+          $p = Start-Process dist/TruckTMS-Setup.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CURRENTUSER /DIR=`"$dir`"" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "Setup failed with exit code $($p.ExitCode)" }
+          $log = Join-Path $env:RUNNER_TEMP "self-test-installed"
+          $p = Start-Process -FilePath (Join-Path $dir "TruckTMS.exe") -ArgumentList "--self-test `"$log`"" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "Installed app self-test failed with exit code $($p.ExitCode)" }
+          $p = Start-Process -FilePath (Join-Path $dir "unins000.exe") -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "Uninstall failed with exit code $($p.ExitCode)" }
+          Start-Sleep -Seconds 3
+          if (Test-Path (Join-Path $dir "TruckTMS.exe")) { throw "Uninstall left TruckTMS.exe behind" }
+          Write-Host "installer: install, self-test and uninstall passed"
+
+      - name: Checksums
+        run: |
+          foreach ($name in "TruckTMS.exe", "TruckTMS-Setup.exe") {
+            $hash = (Get-FileHash "dist/$name" -Algorithm SHA256).Hash.ToLower()
+            "$hash  $name" | Set-Content "dist/$name.sha256" -Encoding ascii
+            Get-Content "dist/$name.sha256"
+          }
 
       - name: Keep the exe as a build artifact
         uses: actions/upload-artifact@v7
@@ -105,9 +127,11 @@ jobs:
           path: |
             dist/TruckTMS.exe
             dist/TruckTMS.exe.sha256
+            dist/TruckTMS-Setup.exe
+            dist/TruckTMS-Setup.exe.sha256
 
       - name: Attach to the release
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" dist/TruckTMS.exe dist/TruckTMS.exe.sha256 --clobber
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/TruckTMS.exe dist/TruckTMS.exe.sha256 dist/TruckTMS-Setup.exe dist/TruckTMS-Setup.exe.sha256 --clobber

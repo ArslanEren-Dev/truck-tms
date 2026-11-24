@@ -21,6 +21,7 @@ from .base import CrudTab
 from .dialog_kit import DialogPage, with_header
 from .theme import warning_color
 from .widgets import (
+    STATUS_TONES,
     NumberEdit,
     button,
     buttons_box,
@@ -206,7 +207,7 @@ class TrucksTab(CrudTab):
                 drivers.get(tr.driver_id, ""), tr.owner_name, status_badge("status.", tr.status),
                 (last_text, last.date if last else "", warning_color(theme) if due else None),
                 tr.vin,
-            ]))
+            ], STATUS_TONES.get(tr.status, "neutral")))
         return rows
 
     def open_dialog(self, record_id):

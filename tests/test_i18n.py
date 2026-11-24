@@ -61,6 +61,7 @@ def test_dynamic_keys_exist():
                   "reports", "settings"),
         "import.field.": __import__("truck_tms.importer", fromlist=["FIELDS"]).FIELDS,
         "doc.kind.": database.DOCUMENT_KINDS,
+        "dpay.": __import__("truck_tms.ui.driver_pay", fromlist=["PERIODS"]).PERIODS,
     }
     missing = [prefix + value for prefix, values in groups.items() for value in values
                if prefix + value not in STRINGS]

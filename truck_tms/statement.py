@@ -22,6 +22,7 @@ from pathlib import Path
 
 from .database import Database, Driver, Load, Statement, StatementItem, Truck, ValidationError
 from .i18n import t
+from .profit import load_driver_pay
 from .printout import HEAD, TABLE, LoadTotals, company_html, esc, facts_html, money, page, vehicle_text
 from .weeks import week_end, week_label
 
@@ -142,11 +143,10 @@ def _pay_lines(loads: list[Load], drivers: dict[int, Driver], currency: str, uni
         if driver is None or driver.pay_rate is None:
             continue
         rate = driver.pay_rate
+        amount = load_driver_pay(load, driver)
         if driver.pay_type == "percent":
-            amount = load.gross * rate / 100
             desc = f"{load.load_number or ''} {percent(rate)} × {currency}{load.gross:,.2f}"
         elif driver.pay_type == "per_mile":
-            amount = load.total_miles * rate
             desc = f"{load.load_number or ''} {load.total_miles:,.0f} {unit} × {currency}{rate:g}"
         else:  # weekly — once per driver per statement
             if driver.id in weekly_done:

@@ -2,6 +2,50 @@
 
 All notable changes to Truck TMS. Türkçe özet her sürümün altında.
 
+## [0.7.0] — 2026-11-24
+
+### Added
+- **Load board**: the Loads page has a *List* / *Board* switch. The board shows one column per status
+  (Planned → Dispatched → In Transit → Delivered → Invoiced → Paid) with the count and gross of each.
+  Drag a card to another column to change the load's status. The app remembers which view you used.
+- **Details panel**: click a load (in the list or on the board) and a panel slides in from the right with the route,
+  dates, truck, driver, the profit breakdown with a margin gauge, the invoice status and documents.
+  Edit or invoice from there; Esc closes it.
+- **Today**: the Overview lists today's pickups and deliveries, late deliveries, and delivered loads still waiting
+  for an invoice (after 2 days), each with a one-click *Open* or *Invoice* button.
+- **Getting started**: an empty file shows three steps (add a truck, a driver, the first load) with buttons.
+- **Installer**: releases now include `TruckTMS-Setup.exe` next to the portable `TruckTMS.exe`. It installs for the
+  current user without administrator rights, adds Start menu and optional desktop shortcuts, and can be removed from
+  Windows settings. Uninstalling never touches your data file. GitHub builds it and tests a silent install,
+  the installed app's self-test and the uninstall on every release.
+- **Profit per load**: the Loads page shows an *Est. profit* and *Profit/mi* column (green or red) and the total.
+  Estimate = gross − dispatch fee − driver pay − fuel (the truck's fuel cost per mile from its fuel expenses,
+  or the fleet average). The load form shows the same breakdown while you type.
+- **Driver Pay page**: what every driver earned in a period (this month, last month, this quarter, this year or
+  any dates): loads, miles, gross, pay, pay per mile and % of gross. Export to PDF/CSV or print.
+- **Quick search (Ctrl+K)**: one box finds loads, trucks, drivers, invoices and pages; Enter opens the record.
+- **Keyboard shortcuts**: Ctrl+N new record on the current page, Ctrl+F search box, Ctrl+1…9 pages, Enter to edit
+  and Delete to delete the selected row, F5 reload; Help → Keyboard Shortcuts (F1) lists them all.
+
+### Changed
+- **New look**: a gradient hero band on the Overview with a greeting, the date and glass-style quick buttons;
+  weekly trend lines and ▲▼ change badges on the gross and miles cards; a coloured status edge on every list row;
+  the Segoe UI Variable font.
+- **Animations**: cards fade in one after another, numbers glide to their new value instead of restarting at zero,
+  a deleted row turns red before it disappears, the "Saved" check mark draws itself, the load form has a profit
+  gauge that sweeps as you type, and the start-up screen turns from dusk to night while city windows light up.
+- New data file moved to **Ctrl+Shift+N** (Ctrl+N now adds a record).
+- The driver pay rules live in one place (`profit.py`) and are shared by statements, the Driver Pay page and
+  the profit estimate.
+- Build scripts moved to `packaging/` (`build_exe.ps1`, `build_installer.ps1`, `TruckTMS.iss`).
+- Unused translations were removed; 898 tests.
+
+**Türkçe:** sürükle-bırak yük panosu, sağdan açılan yük detay paneli, "Bugün" listesi, boş dosya için başlangıç
+rehberi, kurulum programı (TruckTMS-Setup.exe), yük başına tahmini kâr ve mil başına kâr, dönemlik sürücü ödeme özeti
+(PDF/CSV), Ctrl+K hızlı arama ve klavye kısayolları. Yeni görünüm: renk geçişli üst bant, mini trend grafikleri,
+satırlarda renkli durum şeridi; sırayla beliren kartlar, kayarak değişen sayılar, kâr göstergesi ve gece olan
+başlangıç ekranı.
+
 ## [0.6.0] — 2026-11-20
 
 ### Added

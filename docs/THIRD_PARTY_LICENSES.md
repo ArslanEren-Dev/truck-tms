@@ -21,7 +21,7 @@ without any extra package.
 - Qt and PySide6 are used unmodified, as dynamically loaded libraries. Inside the exe they are
   unpacked to a temporary folder at start-up.
 - You can replace them with your own (modified) builds of Qt/PySide6 in two ways: run Truck TMS from source
-  (`pip install -e .` then `truck-tms`), or rebuild the exe with `build_exe.ps1`.
+  (`pip install -e .` then `truck-tms`), or rebuild the exe with `packaging/build_exe.ps1`.
 - The source code of Qt and PySide6 is available at <https://code.qt.io/> and
   <https://download.qt.io/official_releases/QtForPython/>.
 

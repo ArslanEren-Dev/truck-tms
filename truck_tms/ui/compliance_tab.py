@@ -18,6 +18,7 @@ from ..i18n import t
 from .base import CrudTab
 from .dialog_kit import DialogPage
 from .widgets import (
+    STATUS_TONES,
     buttons_box,
     date_edit,
     driver_combo,
@@ -151,7 +152,7 @@ class ComplianceTab(CrudTab):
                 (left, e.days_left),
                 status_badge("comp.status.", e.status),
                 e.reference or "",
-            ]))
+            ], STATUS_TONES.get(e.status, "neutral")))
         return rows
 
     def open_dialog(self, record_id):

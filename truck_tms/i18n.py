@@ -427,8 +427,6 @@ STRINGS: dict[str, dict[str, str]] = {
     "dash.no_reminders": {"en": "All good: no service or CDL renewal is due.",
                           "tr": "Her şey yolunda: bakımı ya da ehliyet yenilemesi gelen yok."},
     "dash.service_due": {"en": "{truck}: {service} is due", "tr": "{truck}: {service} zamanı geldi"},
-    "dash.cdl_soon": {"en": "{name}: CDL expires soon", "tr": "{name}: ehliyetin süresi yakında doluyor"},
-    "dash.cdl_expired": {"en": "{name}: CDL has expired", "tr": "{name}: ehliyetin süresi doldu"},
     # ------------------------------------------------------------ notifications
     "toast.saved": {"en": "Saved", "tr": "Kaydedildi"},
     "toast.deleted": {"en": "Deleted", "tr": "Silindi"},
@@ -876,6 +874,119 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Truck TMS {version} is available (you have {current}). Open the download page?",
         "tr": "Truck TMS {version} yayınlandı (sizdeki: {current}). İndirme sayfası açılsın mı?",
     },
+    # ---------------------------------------------------------- v0.7: load profit
+    "load.profit": {"en": "Est. profit", "tr": "Tahmini kâr"},
+    "load.profit_per_mile": {"en": "Profit/{unit}", "tr": "Kâr/{unit}"},
+    "load.profit_tip": {
+        "en": "Estimate: gross − dispatch fee − driver pay − fuel (the truck's fuel cost per mile × miles)",
+        "tr": "Tahmin: brüt − dispatch ücreti − sürücü ödemesi − yakıt (tırın mil başına yakıt maliyeti × mil)",
+    },
+    "load.profit_line": {
+        "en": "Est. profit {profit} = gross − fee {fee} − driver {driver} − fuel {fuel}",
+        "tr": "Tahmini kâr {profit} = brüt − dispatch {fee} − sürücü {driver} − yakıt {fuel}",
+    },
+    # ---------------------------------------------------------- v0.7: driver pay
+    "tab.driver_pay": {"en": "Driver Pay", "tr": "Sürücü Ödemeleri"},
+    "page.driver_pay": {
+        "en": "What every driver earned in a period: loads, miles, gross and pay",
+        "tr": "Bir dönemde her sürücünün kazancı: yük, mil, brüt ve ödeme",
+    },
+    "dpay.title": {"en": "Driver pay summary", "tr": "Sürücü ödeme özeti"},
+    "dpay.period": {"en": "Period", "tr": "Dönem"},
+    "dpay.this_month": {"en": "This month", "tr": "Bu ay"},
+    "dpay.last_month": {"en": "Last month", "tr": "Geçen ay"},
+    "dpay.this_quarter": {"en": "This quarter", "tr": "Bu çeyrek"},
+    "dpay.this_year": {"en": "This year", "tr": "Bu yıl"},
+    "dpay.custom": {"en": "Custom dates", "tr": "Özel tarih"},
+    "dpay.basis": {"en": "Pay settings", "tr": "Ödeme şekli"},
+    "dpay.earned": {"en": "Earned", "tr": "Kazanç"},
+    "dpay.per_mile": {"en": "Pay/{unit}", "tr": "Ödeme/{unit}"},
+    "dpay.share": {"en": "% of gross", "tr": "Brütün %'si"},
+    "dpay.total": {"en": "Total driver pay", "tr": "Toplam sürücü ödemesi"},
+    "dpay.drivers": {"en": "Drivers", "tr": "Sürücü sayısı"},
+    "dpay.no_data": {"en": "No loads with a driver in this period.", "tr": "Bu dönemde sürücülü yük yok."},
+    "dpay.warn_no_driver": {
+        "en": "{n} load(s) in this period have no driver and are not counted.",
+        "tr": "Bu dönemde sürücüsü olmayan {n} yük sayılmadı.",
+    },
+    "dpay.disclaimer": {
+        "en": "Calculated from each driver's pay settings and the loads delivered in the period. "
+              "Additions, deductions and manual amounts on statements are not included.",
+        "tr": "Her sürücünün ödeme ayarlarından ve dönemde teslim edilen yüklerden hesaplanır. "
+              "Statement'lardaki ekler, kesintiler ve elle girilen tutarlar dahil değildir.",
+    },
+    "dpay.export_title": {"en": "Export driver pay", "tr": "Sürücü ödemelerini dışa aktar"},
+    # ---------------------------------------------------------- v0.7: shortcuts / quick search
+    "menu.quick_search": {"en": "Quick Search…", "tr": "Hızlı Arama…"},
+    "menu.new_record": {"en": "New Record on This Page", "tr": "Bu Sayfada Yeni Kayıt"},
+    "menu.shortcuts": {"en": "Keyboard Shortcuts", "tr": "Klavye Kısayolları"},
+    "shortcuts.text": {
+        "en": "Ctrl+K\tQuick search: loads, trucks, drivers, invoices, pages\n"
+              "Ctrl+N\tNew record on this page\n"
+              "Ctrl+F\tSearch box of this page\n"
+              "Ctrl+1 … Ctrl+9\tGo to page 1 … 9\n"
+              "Enter\tEdit the selected row\n"
+              "Delete\tDelete the selected row\n"
+              "F5\tReload this page\n"
+              "Ctrl+S\tSave\n"
+              "Ctrl+Shift+S\tSave a backup copy\n"
+              "Ctrl+Shift+N\tNew data file\n"
+              "Ctrl+O\tOpen a data file\n"
+              "Ctrl+I\tImport loads from Excel/CSV",
+        "tr": "Ctrl+K\tHızlı arama: yükler, tırlar, sürücüler, faturalar, sayfalar\n"
+              "Ctrl+N\tBu sayfada yeni kayıt\n"
+              "Ctrl+F\tBu sayfanın arama kutusu\n"
+              "Ctrl+1 … Ctrl+9\t1 … 9. sayfaya git\n"
+              "Enter\tSeçili satırı düzenle\n"
+              "Delete\tSeçili satırı sil\n"
+              "F5\tSayfayı yenile\n"
+              "Ctrl+S\tKaydet\n"
+              "Ctrl+Shift+S\tYedek kopya kaydet\n"
+              "Ctrl+Shift+N\tYeni veri dosyası\n"
+              "Ctrl+O\tVeri dosyası aç\n"
+              "Ctrl+I\tExcel/CSV'den yük aktar",
+    },
+    "quick.placeholder": {
+        "en": "Search loads, trucks, drivers, invoices or pages…",
+        "tr": "Yük, tır, sürücü, fatura veya sayfa ara…",
+    },
+    "quick.hint": {"en": "↑ ↓ to choose · Enter to open · Esc to close", "tr": "↑ ↓ seç · Enter aç · Esc kapat"},
+    "quick.no_results": {"en": "Nothing found", "tr": "Bir şey bulunamadı"},
+    "quick.page": {"en": "Page", "tr": "Sayfa"},
+    "quick.new": {"en": "New: {what}", "tr": "Yeni: {what}"},
+    # ---------------------------------------------------------- v0.7: board, details, today, getting started
+    "view.list": {"en": "List", "tr": "Liste"},
+    "view.board": {"en": "Board", "tr": "Pano"},
+    "board.profit": {"en": "Profit {amount}", "tr": "Kâr {amount}"},
+    "board.moved": {"en": "{number} moved to {status}", "tr": "{number} → {status}"},
+    "detail.no_invoice": {"en": "No invoice yet", "tr": "Henüz fatura yok"},
+    "dash.morning": {"en": "Good morning", "tr": "Günaydın"},
+    "dash.afternoon": {"en": "Good afternoon", "tr": "İyi günler"},
+    "dash.evening": {"en": "Good evening", "tr": "İyi akşamlar"},
+    "dash.vs_last_week": {"en": "This week so far, compared with all of last week",
+                          "tr": "Bu haftanın şu ana kadarki değeri, geçen haftanın tamamıyla karşılaştırıldı"},
+    "today.title": {"en": "Today", "tr": "Bugün"},
+    "today.nothing": {
+        "en": "Nothing to pick up, deliver or invoice today.",
+        "tr": "Bugün alınacak, teslim edilecek veya faturalanacak yük yok.",
+    },
+    "today.pickup": {"en": "Pickup today: {number}", "tr": "Bugün yükleme: {number}"},
+    "today.delivery": {"en": "Delivery today: {number}", "tr": "Bugün teslimat: {number}"},
+    "today.late": {"en": "{number} is {n} day(s) late", "tr": "{number}, {n} gün gecikti"},
+    "today.invoice": {"en": "Ready to invoice: {number}", "tr": "Faturalanmayı bekliyor: {number}"},
+    "today.open": {"en": "Open", "tr": "Aç"},
+    "today.invoice_btn": {"en": "Invoice", "tr": "Faturala"},
+    "start.title": {"en": "Get started in three steps", "tr": "Üç adımda başlayın"},
+    "start.hint": {
+        "en": "Add a truck and a driver, then your first load. Everything else builds on these.",
+        "tr": "Bir tır ve bir sürücü ekleyin, ardından ilk yükünüzü girin. Diğer her şey bunların üzerine kurulur.",
+    },
+    "start.truck": {"en": "Add your first truck", "tr": "İlk tırınızı ekleyin"},
+    "start.driver": {"en": "Add a driver and how they are paid", "tr": "Bir sürücü ve ödeme şeklini ekleyin"},
+    "start.load": {"en": "Enter your first load", "tr": "İlk yükünüzü girin"},
+    "start.truck_btn": {"en": "Add truck", "tr": "Tır ekle"},
+    "start.driver_btn": {"en": "Add driver", "tr": "Sürücü ekle"},
+    "start.load_btn": {"en": "Add load", "tr": "Yük ekle"},
 }
 
 _language = "en"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -18,6 +19,7 @@ from ..database import Database
 from ..i18n import t
 from .theme import icon, token
 from .toast import show_toast
+from .visuals import flash_row
 from .widgets import (
     button,
     confirm,
@@ -124,6 +126,12 @@ class CrudTab(QWidget):
         self.edit_btn.clicked.connect(self._edit_selected)
         self.delete_btn.clicked.connect(self._delete_selected)
         self.table.doubleClicked.connect(self._edit_selected)
+        # keyboard: Enter edits, Delete deletes the selected row while the table has the focus
+        for key, slot in ((Qt.Key.Key_Return, self._edit_selected), (Qt.Key.Key_Enter, self._edit_selected),
+                          (Qt.Key.Key_Delete, self._delete_selected)):
+            shortcut = QShortcut(QKeySequence(key), self.table)
+            shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)
+            shortcut.activated.connect(slot)
 
     # -- to override -------------------------------------------------------
     def headers(self) -> list[str]:
@@ -188,6 +196,16 @@ class CrudTab(QWidget):
             show_error(self, "select_row")
         return record_id
 
+    def focus_search(self) -> bool:
+        """Ctrl+F: put the cursor in the page's search box (False when the page has none)."""
+        for i in range(self.toolbar.count()):
+            widget = self.toolbar.itemAt(i).widget()
+            if isinstance(widget, QLineEdit):
+                widget.setFocus()
+                widget.selectAll()
+                return True
+        return False
+
     def has_filters(self) -> bool:
         """True when a search text or a non-"All" filter is active in the toolbar."""
         for i in range(self.toolbar.count()):
@@ -225,9 +243,14 @@ class CrudTab(QWidget):
         record_id = self.selected_or_warn()
         if record_id is None:
             return
+        row = self.table.currentRow()
         try:
-            if self.delete_record(record_id):
-                self.refresh()
-                show_toast(t("toast.deleted"), "info")
+            deleted = self.delete_record(record_id)
         except Exception as exc:  # pragma: no cover - surfaced to the user
             show_error(self, exc)
+            return
+        if deleted:
+            def done() -> None:
+                self.refresh()
+                show_toast(t("toast.deleted"), "info")
+            flash_row(self.table, row, "danger", done)

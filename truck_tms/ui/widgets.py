@@ -225,6 +225,7 @@ class SortItem(QTableWidgetItem):
 
 # ------------------------------------------------------------------ status badges
 BADGE_ROLE = Qt.ItemDataRole.UserRole + 1
+STRIPE_ROLE = Qt.ItemDataRole.UserRole + 3  # tone of the coloured edge at the start of a row
 
 STATUS_TONES = {
     "active": "success", "maintenance": "warning", "inactive": "neutral",
@@ -284,9 +285,13 @@ class BadgeDelegate(QStyledItemDelegate):
             tint = QColor(token("accent"))
             tint.setAlpha(20)
             painter.fillRect(option.rect, tint)
+        stripe = index.data(STRIPE_ROLE) if index.column() == 0 else None
         tone = index.data(BADGE_ROLE)
         if not tone:
             super().paint(painter, option, index)
+            if stripe:
+                painter.fillRect(option.rect.x(), option.rect.y() + 3, 3, option.rect.height() - 6,
+                                 QColor(token(f"{stripe}_fg")))
             return
         opt = QStyleOptionViewItem(option)
         self.initStyleOption(opt, index)
@@ -352,13 +357,16 @@ def make_table(headers: list[str]) -> QTableWidget:
 _NUMBER_ALIGN = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter  # built once, not per cell
 
 
-def fill_table(table: QTableWidget, rows: list[tuple[int, list]]) -> None:
-    """``rows`` = [(record_id, [cell, ...]), ...]; a cell is text, (text, sort_key),
-    (text, sort_key, QColor) for coloured text, or a ``Badge``."""
+def fill_table(table: QTableWidget, rows: list[tuple]) -> None:
+    """``rows`` = [(record_id, [cell, ...]), ...] or (record_id, cells, stripe_tone) for a coloured
+    edge at the start of the row; a cell is text, (text, sort_key), (text, sort_key, QColor) for
+    coloured text, or a ``Badge``."""
     table.setUpdatesEnabled(False)  # one repaint at the end instead of one per cell
     table.setSortingEnabled(False)
     table.setRowCount(len(rows))
-    for r, (record_id, cells) in enumerate(rows):
+    for r, row in enumerate(rows):
+        record_id, cells = row[0], row[1]
+        stripe = row[2] if len(row) > 2 else None
         for c, cell in enumerate(cells):
             color = None
             tone = None
@@ -376,6 +384,8 @@ def fill_table(table: QTableWidget, rows: list[tuple[int, list]]) -> None:
                 item.setData(BADGE_ROLE, tone)
             if c == 0:
                 item.setData(Qt.ItemDataRole.UserRole, record_id)
+                if stripe:
+                    item.setData(STRIPE_ROLE, stripe)
             if isinstance(key, (int, float)):
                 item.setTextAlignment(_NUMBER_ALIGN)
             table.setItem(r, c, item)

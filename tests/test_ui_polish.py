@@ -56,8 +56,8 @@ def wait_until(condition, timeout=3.0):
 def test_sidebar_pages_icons_and_header(window):
     tabs = window.tabs
     assert [tabs.tabText(i) for i in range(tabs.count())] == [
-        "Overview", "Trucks", "Drivers", "Loads", "Invoices", "Statements", "Maintenance", "Expenses", "Compliance",
-        "IFTA", "Truck Report", "Settings"]
+        "Overview", "Trucks", "Drivers", "Loads", "Invoices", "Statements", "Driver Pay", "Maintenance", "Expenses",
+        "Compliance", "IFTA", "Truck Report", "Settings"]
     assert all(not b.icon().isNull() for b in tabs._buttons)
     tabs.setCurrentIndex(3)
     assert tabs.title.text() == "Loads"
