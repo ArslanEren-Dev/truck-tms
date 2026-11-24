@@ -164,7 +164,7 @@ def test_template_round_trip(db, tmp_path):
     path = write_template(tmp_path / "template.csv")
     headers, rows = read_table(path)
     mapping = auto_map(headers)
-    assert len(mapping) == len(headers)  # every template column is recognised
+    assert len(mapping) == len(headers)  # every template column is recognized
     assert import_loads(db, rows, mapping).imported == 1
 
 

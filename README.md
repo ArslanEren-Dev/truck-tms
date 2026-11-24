@@ -76,7 +76,7 @@ It is written in Python + Qt (PySide6), stores its data in a single SQLite file,
   - Driver items: **CDL**, **DOT medical card**, drug & alcohol test, MVR.
   - Truck items: **registration (IRP)**, **insurance**, **annual DOT inspection**, permits.
   - Company items: **UCR**, **Form 2290**, **MCS-150**, IFTA license.
-  - Each item is shown as *Valid*, *Expires soon* (30 days) or *Expired*. Expired and expiring items show up on the Overview.
+  - Each item is shown as *Valid*, *Expires Soon* (30 days) or *Expired*. Expired and expiring items show up on the Overview.
 - **IFTA quarterly worksheet** *(new in 0.6)*:
   - Split a load's miles by state, and add gallons and the state to fuel expenses.
   - The IFTA page works out **fleet MPG**, **taxable gallons**, **tax-paid gallons**, **net gallons** and the
@@ -85,7 +85,7 @@ It is written in Python + Qt (PySide6), stores its data in a single SQLite file,
   - Export it as PDF/CSV or print it.
   - It warns you about miles without a state split and about missing rates.
 - **Update check** *(new in 0.6)*: once a day the app asks GitHub whether a new version is out.
-  If there is one, an *Update available* button appears. You can also run the check from **Help → Check for updates**,
+  If there is one, an *Update Available* button appears. You can also run the check from **Help → Check for Updates**,
   or turn it off in Settings. The app only reads the public release page and sends no data.
 - **Maintenance**: service records with odometer, cost, shop, details, and the next due date or odometer.
   Trucks that are due for service are highlighted.
@@ -117,7 +117,7 @@ It is written in Python + Qt (PySide6), stores its data in a single SQLite file,
 - **Look and feel**:
   - A sidebar whose highlight slides to the page you pick, and pages that glide in.
   - A clean **white** or **black** theme with a one-click switch.
-  - Colored status badges and a coloured status edge on every row; icon buttons that lift when you hover over them.
+  - Colored status badges and a colored status edge on every row; icon buttons that lift when you hover over them.
   - Cards that fade in one after another, numbers that glide to their new value, and a row that turns red before it
     is deleted.
   - Small notifications ("Saved", "Deleted", "Exported") that slide in at the bottom right, with a check mark that
@@ -212,7 +212,7 @@ To back up your data, copy that file. Databases created by older versions are up
 | **Backups** | Once a day, a copy goes to `backups/` next to the data file, and the newest 14 are kept. *Save a backup copy* copies the attached documents too. |
 | **Statements** | Gross − dispatcher fee − fuel − tolls − driver net pay (if the driver is paid from the statement) ± owner items = owner payout. See [How the statement is calculated](#how-the-statement-is-calculated). |
 | **Invoices** | Balance due = amount − received − quick pay / factoring fee. The due date is the invoice date + terms. Each unpaid invoice falls into an aging bucket by days past due, and the load's status follows its invoice. |
-| **Compliance** | An item is *Expired* after its date and *Expires soon* within 30 days. Both kinds show up on the Overview. |
+| **Compliance** | An item is *Expired* after its date and *Expires Soon* within 30 days. Both kinds show up on the Overview. |
 | **IFTA** | Fleet MPG = miles ÷ gallons. Then for each state: taxable gallons = state miles ÷ MPG, net gallons = taxable − tax-paid gallons, and tax = net gallons × your rate. |
 | **Updates** | At most once a day, the app reads the public *latest release* page of this repository and compares version numbers. Nothing about you or your data is sent. You can turn it off in Settings. |
 | **Profit** | Estimated profit = gross − dispatch fee − driver pay − fuel, where fuel = the load's miles × the truck's fuel cost per mile (its fuel expenses ÷ its miles, or the fleet average). |
@@ -311,7 +311,7 @@ Python + Qt (PySide6) ile yazılmıştır. Veriler tek bir SQLite dosyasında tu
 - **Yükler**: tüm detaylar isteğe bağlıdır. **Load # her zaman `#` ile başlar.** Bir yükte tır, **yükü süren sürücü**,
   broker, **rate**, **ek ücret** (detention, layover, lumper), **yüklü mil**, **boş mil (dead mile)** ve **TONU** bilgisi bulunabilir.
   **Toplam mil**, **yük başına brüt (gross)** ve **mil başına rate** otomatik hesaplanır. Listede her yükün
-  **hangi statement haftasına dahil olduğu** görünür.
+  **hangi statement haftasına dâhil olduğu** görünür.
 - **Yük panosu** *(0.7'de yeni)*: Yükler sayfası liste ile **pano** arasında geçiş yapar. Panoda her durum bir sütundur
   (Planlandı → Yola Çıkarıldı → Yolda → Teslim Edildi → Faturalandı → Ödendi). Kartı sürükleyip bırakınca yükün durumu değişir.
 - **Detay paneli** *(0.7'de yeni)*: bir yüke tıklayınca sağdan bir panel kayarak açılır: rota, tarihler, tır, sürücü,
@@ -348,7 +348,7 @@ Python + Qt (PySide6) ile yazılmıştır. Veriler tek bir SQLite dosyasında tu
   - Sürücü belgeleri: **CDL**, **DOT sağlık kartı**, uyuşturucu & alkol testi, MVR.
   - Tır belgeleri: **ruhsat (IRP)**, **sigorta**, **yıllık DOT muayenesi**, izin belgeleri.
   - Şirket belgeleri: **UCR**, **Form 2290**, **MCS-150**, IFTA lisansı.
-  - Her biri *Geçerli*, *Yakında doluyor* (30 gün) veya *Süresi doldu* olarak gösterilir. Süresi dolanlar ve dolmak
+  - Her biri *Geçerli*, *Yakında Doluyor* (30 gün) veya *Süresi Doldu* olarak gösterilir. Süresi dolanlar ve dolmak
     üzere olanlar Genel Bakış'ta da görünür.
 - **IFTA çeyreklik tablosu** *(0.6'da yeni)*:
   - Yükün millerini eyaletlere bölün, yakıt masraflarına galon ve eyalet girin.
@@ -358,7 +358,7 @@ Python + Qt (PySide6) ile yazılmıştır. Veriler tek bir SQLite dosyasında tu
   - Tablo PDF/CSV olarak dışa aktarılabilir ya da yazdırılabilir.
   - Eyalete bölünmemiş miller ve eksik oranlar için uyarı verir.
 - **Güncelleme bildirimi** *(0.6'da yeni)*: uygulama günde bir kez GitHub'a yeni sürüm olup olmadığını sorar.
-  Yeni sürüm varsa *Güncelleme var* butonu çıkar. **Yardım → Güncellemeleri denetle** ile elle de bakabilir, Ayarlar'dan
+  Yeni sürüm varsa *Güncelleme Var* butonu çıkar. **Yardım → Güncellemeleri Denetle** ile elle de bakabilir, Ayarlar'dan
   kapatabilirsiniz. Uygulama yalnızca herkese açık sürüm sayfasını okur, hiçbir veri göndermez.
 - **Bakım**: sayaç, tutar, servis, detaylar, sonraki bakım tarihi veya sayacı. Bakımı gelen tırlar kırmızı ile işaretlenir.
 - **Masraflar** ve tarih aralığına göre **tır raporu** (PDF/CSV olarak dışa aktarma veya yazdırma).
@@ -393,7 +393,7 @@ Python + Qt (PySide6) ile yazılmıştır. Veriler tek bir SQLite dosyasında tu
   - Sağ altta kayarak beliren küçük bildirimler; "Kaydedildi" bildiriminde kendini çizen bir onay işareti.
   - Liste boşken ilk ne ekleyeceğinizi söyleyen sayfalar.
   - Uygulama yüklenirken akşamdan geceye geçen gökyüzünde, şehir ışıkları yanarken yolda ilerleyen bir tır.
-- Uygulamanın tamamı **Türkçe ve İngilizce**: pencereler, tarih seçiciler ve PDF'ler dahil. Otomatik testler her metnin
+- Uygulamanın tamamı **Türkçe ve İngilizce**: pencereler, tarih seçiciler ve PDF'ler dâhil. Otomatik testler her metnin
   iki dilde de bulunduğunu kontrol eder.
 - **Ayarlar**: dil, tema, firma bilgileri, para birimi, mil/km, statement haftasının başladığı gün ve varsayılan şirket kesintisi.
 
@@ -442,7 +442,7 @@ Exe'yi GitHub derler, kendi bilgisayarınızda derlemeniz gerekmez:
 1. `truck_tms/__init__.py` ve `pyproject.toml` dosyalarında sürüm numarasını güncelleyin (örneğin `0.8.0`).
 2. GitHub'da **Releases → Draft a new release** deyin, `v0.8.0` etiketini oluşturun ve **Publish release** deyin.
 3. [Release akışı](.github/workflows/release.yml) testleri çalıştırır, `TruckTMS.exe`'yi ve kurulum programını derler, ikisinin
-   de testini (sessiz kurulum ve kaldırma dahil) yapar ve SHA-256 özetleriyle release'e ekler. Yaklaşık 6 dakika sürer;
+   de testini (sessiz kurulum ve kaldırma dâhil) yapar ve SHA-256 özetleriyle release'e ekler. Yaklaşık 6 dakika sürer;
    ilerlemeyi **Actions** sekmesinden izleyebilirsiniz.
 
 Etiket koddaki sürümle eşleşmezse akış durur. Release yayınlamadan exe derlemek için: **Actions → release → Run workflow**.
@@ -463,11 +463,11 @@ Paylaşımlarda görünen kapak görselini ayarlamak için: **Settings → Gener
 | **Yedek** | Günde bir kez `backups/` klasörüne kopya alınır ve son 14 kopya saklanır. *Yedek kopya kaydet* belgeleri de kopyalar. |
 | **Statement** | Brüt − dispatcher kesintisi − yakıt − toll − sürücü net ücreti (statement'tan ödeniyorsa) ± tır sahibi kalemleri = tır sahibine ödeme. |
 | **Fatura** | Kalan borç = tutar − tahsil edilen − quick pay/factoring kesintisi. Vade = fatura tarihi + vade günü. Ödenmemiş her fatura gecikme gününe göre bir yaş grubuna düşer, yükün durumu da faturayı izler. |
-| **Belge takibi** | Tarihi geçen *Süresi doldu*, 30 gün içinde dolacak olan *Yakında doluyor* olarak gösterilir. İkisi de Genel Bakış'ta görünür. |
+| **Belge takibi** | Tarihi geçen *Süresi Doldu*, 30 gün içinde dolacak olan *Yakında Doluyor* olarak gösterilir. İkisi de Genel Bakış'ta görünür. |
 | **IFTA** | Filo MPG = mil ÷ galon. Sonra her eyalet için: vergiye tabi galon = eyalet mili ÷ MPG, net galon = vergiye tabi − vergisi ödenmiş galon, vergi = net galon × sizin girdiğiniz oran. |
 | **Güncelleme** | Uygulama en fazla günde bir kez bu deponun herkese açık *son sürüm* sayfasını okuyup sürüm numaralarını karşılaştırır. Size ya da verilerinize dair hiçbir şey gönderilmez. Ayarlar'dan kapatılabilir. |
 | **Kâr** | Tahmini kâr = brüt − dispatch ücreti − sürücü ödemesi − yakıt; yakıt = yükün mili × tırın mil başına yakıt maliyeti (yakıt masrafları ÷ milleri, yoksa filo ortalaması). |
-| **Kalite** | Her gönderimde ruff denetimi ve 898 test Windows ve Linux'ta, Python 3.12 ve 3.13 ile çalışır. Her testin 2 dakika süre sınırı vardır. Sürüm yayınlanınca GitHub exe'yi ve kurulum programını derler, ikisini de test eder (sessiz kurulum ve kaldırma dahil) ve SHA-256 özetleriyle sürüme ekler. |
+| **Kalite** | Her gönderimde ruff denetimi ve 898 test Windows ve Linux'ta, Python 3.12 ve 3.13 ile çalışır. Her testin 2 dakika süre sınırı vardır. Sürüm yayınlanınca GitHub exe'yi ve kurulum programını derler, ikisini de test eder (sessiz kurulum ve kaldırma dâhil) ve SHA-256 özetleriyle sürüme ekler. |
 
 Sürüm sürüm tüm değişiklikler: **[CHANGELOG.md](CHANGELOG.md)**.
 

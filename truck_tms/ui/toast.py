@@ -105,6 +105,6 @@ def show_toast(text: str, tone: str = "success", action: tuple[str, Callable[[],
     host = main_window()
     if host is None:
         return None
-    toast = Toast(host, text, tone, action, duration_ms)  # colours come from the stylesheet (#Toast)
+    toast = Toast(host, text, tone, action, duration_ms)  # colors come from the stylesheet (#Toast)
     toast.popup()
     return toast

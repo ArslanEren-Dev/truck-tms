@@ -167,7 +167,7 @@ class StatementDialog(QDialog):
         self.items.setColumnWidth(1, 300)
         add_item = button(t("btn.add_item"), None, "plus")
         remove_item = button(t("btn.remove_item"), "danger", "trash")
-        add_item.clicked.connect(lambda: self._add_item_row())
+        add_item.clicked.connect(lambda: self._add_item_row())  # clicked() passes a bool
         remove_item.clicked.connect(self._remove_item_row)
         item_buttons = QHBoxLayout()
         item_buttons.addWidget(add_item)

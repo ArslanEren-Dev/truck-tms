@@ -307,8 +307,8 @@ class InvoicesTab(CrudTab):
         rows = []
         for inv in self._invoices:
             status = inv.status(today)
-            if wanted == "unpaid" and status == "paid" or wanted == "paid" and status != "paid" \
-                    or wanted == "overdue" and status != "overdue":
+            if (wanted == "unpaid" and status == "paid") or (wanted == "paid" and status != "paid") \
+                    or (wanted == "overdue" and status != "overdue"):
                 continue
             load = loads.get(inv.load_id)
             late = inv.days_overdue(today)

@@ -29,7 +29,7 @@ All notable changes to Truck TMS. Türkçe özet her sürümün altında.
 
 ### Changed
 - **New look**: a gradient hero band on the Overview with a greeting, the date and glass-style quick buttons;
-  weekly trend lines and ▲▼ change badges on the gross and miles cards; a coloured status edge on every list row;
+  weekly trend lines and ▲▼ change badges on the gross and miles cards; a colored status edge on every list row;
   the Segoe UI Variable font.
 - **Animations**: cards fade in one after another, numbers glide to their new value instead of restarting at zero,
   a deleted row turns red before it disappears, the "Saved" check mark draws itself, the load form has a profit
@@ -38,6 +38,8 @@ All notable changes to Truck TMS. Türkçe özet her sürümün altında.
 - The driver pay rules live in one place (`profit.py`) and are shared by statements, the Driver Pay page and
   the profit estimate.
 - Build scripts moved to `packaging/` (`build_exe.ps1`, `build_installer.ps1`, `TruckTMS.iss`).
+- Labels, buttons, table headers and dialog titles now use the same capitalization everywhere, in English and
+  Turkish (for example *New Invoice*, *Invoice Date*, *DOT Medical Card*); Turkish spelling follows TDK (*dâhil*).
 - Unused translations were removed; 898 tests.
 
 **Türkçe:** sürükle-bırak yük panosu, sağdan açılan yük detay paneli, "Bugün" listesi, boş dosya için başlangıç
@@ -60,8 +62,8 @@ başlangıç ekranı.
 - **IFTA quarterly worksheet**: miles by state on every load, gallons + state on fuel expenses.
   Fleet MPG, taxable / tax-paid / net gallons and tax or credit per jurisdiction, for one truck or the fleet;
   your own rate table; PDF/CSV export and print; warnings for miles without a state split and missing rates.
-- **Update check**: once a day the app asks GitHub for the latest release and shows *Update available*.
-  Also in **Help → Check for updates**; can be turned off in Settings. Nothing about you or your data is sent.
+- **Update check**: once a day the app asks GitHub for the latest release and shows *Update Available*.
+  Also in **Help → Check for Updates**; can be turned off in Settings. Nothing about you or your data is sent.
 - Overview: 8 key numbers (receivables and expiring documents added), expenses-by-category ring,
   late invoices and expiring documents in the reminders, *New invoice* quick button.
 - Settings: invoice number prefix, default payment terms, update check on/off.

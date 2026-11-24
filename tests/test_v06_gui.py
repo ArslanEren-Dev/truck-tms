@@ -1,4 +1,4 @@
-"""GUI tests for v0.6: invoices, compliance, IFTA pages, the update check and the new chart behaviour."""
+"""GUI tests for v0.6: invoices, compliance, IFTA pages, the update check and the new chart behavior."""
 
 import time
 from datetime import date, timedelta

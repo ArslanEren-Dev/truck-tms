@@ -27,7 +27,7 @@ from .theme import icon, token
 
 
 class DialogHeader(QWidget):
-    """Coloured icon chip + title + subtitle, separated from the content by a thin line."""
+    """Colored icon chip + title + subtitle, separated from the content by a thin line."""
 
     def __init__(self, icon_name: str, title: str, subtitle: str = "", parent: QWidget | None = None):
         super().__init__(parent)

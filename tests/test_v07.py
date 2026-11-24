@@ -152,11 +152,11 @@ def test_loads_page_shows_profit_columns(window):
 
     page = window.tabs.widget(window.page_index(LoadsTab))
     headers = [page.table.horizontalHeaderItem(c).text() for c in range(page.table.columnCount())]
-    column = headers.index("Est. profit")
+    column = headers.index("Est. Profit")
     assert headers[column + 1] == "Profit/mi"
     # $1,000 − 10% fee − 25% driver pay, no fuel data yet
     assert page.table.item(0, column).text() == "$650.00"
-    assert "Est. profit: $650.00" in page.totals.text()
+    assert "Est. Profit: $650.00" in page.totals.text()
 
 
 def test_driver_pay_page(window):

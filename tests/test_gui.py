@@ -83,7 +83,7 @@ def test_light_theme_is_pure_white_and_dark_is_black(app):
     assert app.palette().window().color() == QColor("#121417")
     for theme in ("light", "dark"):
         qss = stylesheet(theme)
-        assert "@" not in qss  # every colour token was filled in
+        assert "@" not in qss  # every color token was filled in
         assert Path(qss.split('url("')[1].split('")')[0]).is_file()  # chevron icon exists
     apply_theme("light")
 
@@ -187,7 +187,7 @@ def test_help_menu_links_to_github(window, monkeypatch):
     help_menu = window.menuBar().actions()[1].menu()
     texts = [a.text() for a in help_menu.actions() if not a.isSeparator()]
     assert texts == ["Project Website", "Source Code on GitHub", "Report a Problem…", "Keyboard Shortcuts",
-                     "Check for updates…",
+                     "Check for Updates…",
                      "About Truck TMS"]
     for action in help_menu.actions()[:3]:
         action.trigger()

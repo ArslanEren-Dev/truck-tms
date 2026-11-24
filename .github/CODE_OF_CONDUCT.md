@@ -12,7 +12,7 @@ Please:
 - assume good intent and ask before concluding.
 
 Not acceptable: harassment, insults, discriminatory jokes or language, personal attacks,
-publishing someone's private information, or any other behaviour that would make people feel unsafe.
+publishing someone's private information, or any other behavior that would make people feel unsafe.
 
 ## Scope
 
@@ -21,7 +21,7 @@ represent the project.
 
 ## Reporting
 
-If someone's behaviour bothers you, contact the maintainer at **arslaneren.dev@gmail.com**.
+If someone's behavior bothers you, contact the maintainer at **arslaneren.dev@gmail.com**.
 Reports are handled privately. The maintainer may edit or remove comments, close threads or block
 accounts that break this code of conduct.
 

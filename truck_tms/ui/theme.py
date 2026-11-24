@@ -356,7 +356,7 @@ ICON_PATHS = {
 
 
 def nav_icon(name: str) -> QIcon:
-    """Icon for checkable navigation buttons: muted when off, accent colour when selected."""
+    """Icon for checkable navigation buttons: muted when off, accent color when selected."""
     result = QIcon()
     for color, state in ((token("muted"), QIcon.State.Off), (token("accent"), QIcon.State.On)):
         for pix_icon in (icon(name, color),):
@@ -367,7 +367,7 @@ def nav_icon(name: str) -> QIcon:
 
 @cache
 def icon(name: str, color: str | None = None) -> QIcon:
-    """Line icon drawn from an inline SVG path, coloured for the current theme."""
+    """Line icon drawn from an inline SVG path, colored for the current theme."""
     color = color or token("text")
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="{ICON_PATHS[name]}" '
            f'fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>')

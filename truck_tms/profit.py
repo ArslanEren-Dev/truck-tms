@@ -204,7 +204,8 @@ def pay_description(driver: Driver, currency: str, unit: str) -> str:
     if driver.pay_type == "percent":
         return t("pay.desc_percent", rate=t("fmt.percent", v=f"{driver.pay_rate:g}"))
     if driver.pay_type == "per_mile":
-        return t("pay.desc_per_mile", amount=f"{currency}{driver.pay_rate:g}", unit=t("unit." + unit))
+        text = t("pay.desc_per_mile", amount=f"{currency}{driver.pay_rate:g}", unit=t("unit." + unit))
+        return text[:1].upper() + text[1:]  # Turkish puts the unit first: "Mil başına $0.65"
     return t("pay.desc_weekly", amount=money(driver.pay_rate, currency))
 
 

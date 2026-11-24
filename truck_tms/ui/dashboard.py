@@ -277,7 +277,7 @@ class OverviewTab(QWidget):
             ("new_invoice", "dash.new_invoice", "receipt", None),
         ):
             btn = button(t(text_key), variant, icon_name)
-            if variant == "primary":  # white button on the gradient: the icon takes the accent colour
+            if variant == "primary":  # white button on the gradient: the icon takes the accent color
                 btn.setIcon(icon(icon_name, token("accent")))
             btn.clicked.connect(lambda _=False, k=key: self.action_requested.emit(k))
             actions.addWidget(btn)
@@ -407,19 +407,19 @@ class OverviewTab(QWidget):
         c = self.cards
         c["gross"].set_value(o.week_gross, lambda v: money(v, cur), t("dash.loads_count", n=o.week_loads), animate)
         c["miles"].set_value(o.week_miles, lambda v: f"{number(v)} {unit}", week_label(o.week_start), animate)
-        c["moving"].set_value(o.in_progress, lambda v: number(v), t("dash.in_progress_sub"), animate)
+        c["moving"].set_value(o.in_progress, number, t("dash.in_progress_sub"), animate)
         total = o.total_trucks
         c["trucks"].set_value(o.active_trucks, lambda v: f"{number(v)} / {total}",
                               t("dash.trucks_sub", n=o.maintenance_trucks), animate)
         c["unpaid"].set_value(o.unpaid_total, lambda v: money(v, cur), t("dash.unpaid_sub", n=o.unpaid_drivers),
                               animate)
         c["unpaid"].set_tone("danger" if o.unpaid_total > 0 else "success")
-        c["service"].set_value(o.service_due, lambda v: number(v), t("dash.service_sub"), animate)
+        c["service"].set_value(o.service_due, number, t("dash.service_sub"), animate)
         c["service"].set_tone("danger" if o.service_due else "success")
         c["receivable"].set_value(o.receivable_total, lambda v: money(v, cur),
                                   t("dash.receivable_sub", n=o.overdue_invoices), animate)
         c["receivable"].set_tone("danger" if o.overdue_invoices else "info")
-        c["compliance"].set_value(o.compliance_alerts, lambda v: number(v),
+        c["compliance"].set_value(o.compliance_alerts, number,
                                   t("dash.compliance_sub", n=o.compliance_expired), animate)
         c["compliance"].set_tone("danger" if o.compliance_expired else ("info" if o.compliance_alerts else "success"))
 

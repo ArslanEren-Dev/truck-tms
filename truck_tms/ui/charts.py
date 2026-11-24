@@ -433,8 +433,8 @@ class RankChart(Chart):
 
 
 class DonutChart(Chart):
-    """Ring split into coloured parts with a legend; the hovered part lifts out and its value shows
-    in the middle. ``colors`` overrides the theme's series colours."""
+    """Ring split into colored parts with a legend; the hovered part lifts out and its value shows
+    in the middle. ``colors`` overrides the theme's series colors."""
 
     def __init__(self, fmt: Formatter = lambda v: f"{v:,.0f}", parent: QWidget | None = None):
         super().__init__(fmt, parent)

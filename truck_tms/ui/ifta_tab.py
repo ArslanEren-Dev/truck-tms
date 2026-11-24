@@ -44,7 +44,7 @@ class StateMilesEditor(QWidget):
         self.list = QVBoxLayout()
         self.list.setSpacing(4)
         self.add_btn = button(t("ifta.add_state"), None, "plus")
-        self.add_btn.clicked.connect(lambda: self.add_row())
+        self.add_btn.clicked.connect(lambda: self.add_row())  # clicked() passes a bool; add_row must get none
         self.total = QLabel()
         self.total.setProperty("role", "hint")
         bottom = QHBoxLayout()

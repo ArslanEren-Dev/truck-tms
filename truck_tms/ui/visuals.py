@@ -88,7 +88,7 @@ class Sparkline(QWidget):
 
 
 def margin_tone(margin: float | None) -> str:
-    """Colour of a profit margin: red when losing money, orange when thin, green when healthy."""
+    """Color of a profit margin: red when losing money, orange when thin, green when healthy."""
     if margin is None:
         return "neutral"
     if margin < 0:

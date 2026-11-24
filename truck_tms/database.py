@@ -597,7 +597,7 @@ def _non_negative(obj, *names: str, integer: bool = False) -> None:
         value = getattr(obj, name)
         if value is None:
             continue
-        value = int(round(float(value))) if integer else float(value)
+        value = round(float(value)) if integer else float(value)
         if value < 0:
             raise ValidationError("error.negative_number")
         setattr(obj, name, value)

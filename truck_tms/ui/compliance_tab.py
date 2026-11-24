@@ -144,7 +144,7 @@ class ComplianceTab(CrudTab):
             else:
                 left = t("comp.in_days", n=e.days_left)
             owner = e.owner or t("comp.group.company")
-            kind = t("comp.kind." + e.kind) + ("" if e.item else f"  ({t('comp.from_driver')})")
+            kind = t("comp.kind." + e.kind) + ("" if e.item else f" ({t('comp.from_driver')})")
             rows.append((e.row_id, [
                 kind,
                 owner,

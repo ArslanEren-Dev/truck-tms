@@ -175,9 +175,9 @@ class LoadDialog(QDialog):
     def _update_header(self) -> None:
         """The header shows what is being edited: '#4410055 · Dallas, TX → Atlanta, GA · $2,550.00'."""
         parts = []
-        number = self.load_number.text().strip().lstrip("#")
-        if number:
-            parts.append("#" + number)
+        load_no = self.load_number.text().strip().lstrip("#")
+        if load_no:
+            parts.append("#" + load_no)
         pickup, delivery = self.pickup_location.text().strip(), self.delivery_location.text().strip()
         if pickup or delivery:
             parts.append(f"{pickup or '?'} → {delivery or '?'}")
@@ -190,7 +190,7 @@ class LoadDialog(QDialog):
         self.page.header.set_subtitle(" · ".join(parts) if parts else t("load.optional_hint"))
 
     def _truck_changed(self) -> None:
-        """Pre-select the truck's default driver when no driver is chosen yet."""
+        """Preselect the truck's default driver when no driver is chosen yet."""
         truck = self.db.get_truck(self.truck.currentData())
         if truck and truck.driver_id and self.driver.currentData() is None:
             set_combo_data(self.driver, truck.driver_id)
@@ -349,10 +349,14 @@ class LoadsTab(CrudTab):
         self.refresh()
 
     def refresh(self) -> None:
-        super().refresh()
         if self.board_mode:
+            # the hidden table is not filled: with thousands of loads that alone took seconds
+            self.refresh_filters()
+            self.rows()
             self._fill_board()
             self.body.setCurrentWidget(self.board)
+        else:
+            super().refresh()
         if self.panel.is_open:
             self.panel.show_load(self.panel.load_id)
             self.board.select(self.panel.load_id)

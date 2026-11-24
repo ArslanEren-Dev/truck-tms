@@ -84,11 +84,11 @@ def test_page_slides_back_into_place(window):
 
 
 def test_theme_button_in_sidebar(window, app, db):
-    assert window.theme_btn.text() == "Dark mode"
+    assert window.theme_btn.text() == "Dark Mode"
     window.toggle_theme()
     assert wait_until(lambda: app.palette().window().color() == QColor("#121417"))
     assert db.get_settings()["theme"] == "dark"
-    assert wait_until(lambda: window.theme_btn.text() == "Light mode")
+    assert wait_until(lambda: window.theme_btn.text() == "Light Mode")
     window.toggle_theme()
     assert wait_until(lambda: app.palette().window().color() == QColor("#FFFFFF"))
 
@@ -223,6 +223,6 @@ def test_turkish_sidebar(app, db):
 
     db.set_setting("language", "tr")
     win = MainWindow(db)
-    assert win.tabs.tabText(0) == "Genel Bakış" and win.theme_btn.text() == "Koyu tema"
+    assert win.tabs.tabText(0) == "Genel Bakış" and win.theme_btn.text() == "Koyu Tema"
     assert win.overview.cards["gross"].title.text() == "BU HAFTANIN BRÜTÜ"
     win.deleteLater()

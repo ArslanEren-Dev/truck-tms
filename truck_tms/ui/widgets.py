@@ -104,7 +104,7 @@ class NumberEdit(QLineEdit):
 
     def int_value(self) -> int | None:
         value = self.value()
-        return None if value is None else int(round(value))
+        return None if value is None else round(value)
 
 
 class OptionalDateEdit(QWidget):
@@ -225,7 +225,7 @@ class SortItem(QTableWidgetItem):
 
 # ------------------------------------------------------------------ status badges
 BADGE_ROLE = Qt.ItemDataRole.UserRole + 1
-STRIPE_ROLE = Qt.ItemDataRole.UserRole + 3  # tone of the coloured edge at the start of a row
+STRIPE_ROLE = Qt.ItemDataRole.UserRole + 3  # tone of the colored edge at the start of a row
 
 STATUS_TONES = {
     "active": "success", "maintenance": "warning", "inactive": "neutral",
@@ -238,7 +238,7 @@ STATUS_TONES = {
 
 
 class Badge:
-    """A table cell drawn as a coloured pill (see ``BadgeDelegate``)."""
+    """A table cell drawn as a colored pill (see ``BadgeDelegate``)."""
 
     __slots__ = ("text", "tone")
 
@@ -358,9 +358,9 @@ _NUMBER_ALIGN = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter  # b
 
 
 def fill_table(table: QTableWidget, rows: list[tuple]) -> None:
-    """``rows`` = [(record_id, [cell, ...]), ...] or (record_id, cells, stripe_tone) for a coloured
+    """``rows`` = [(record_id, [cell, ...]), ...] or (record_id, cells, stripe_tone) for a colored
     edge at the start of the row; a cell is text, (text, sort_key), (text, sort_key, QColor) for
-    coloured text, or a ``Badge``."""
+    colored text, or a ``Badge``."""
     table.setUpdatesEnabled(False)  # one repaint at the end instead of one per cell
     table.setSortingEnabled(False)
     table.setRowCount(len(rows))

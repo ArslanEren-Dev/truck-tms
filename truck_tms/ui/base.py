@@ -154,7 +154,7 @@ class CrudTab(QWidget):
     def delete(self, record_id: int) -> None:
         raise NotImplementedError
 
-    # -- shared behaviour ----------------------------------------------------
+    # -- shared behavior ----------------------------------------------------
     def add_filter(self, widget: QWidget, label: str | None = None) -> None:
         if label:
             self.toolbar.addWidget(QLabel(label))
@@ -216,11 +216,14 @@ class CrudTab(QWidget):
                 return True
         return False
 
-    def refresh(self) -> None:
+    def refresh_filters(self) -> None:
         for combo in self._truck_filters:  # another page may have added or renamed a truck
             fill_truck_combo(combo, self.db, include_all=True)
         for combo in self._driver_filters:
             fill_driver_combo(combo, self.db, include_all=True)
+
+    def refresh(self) -> None:
+        self.refresh_filters()
         rows = self.rows()
         fill_table(self.table, rows)
         if rows:

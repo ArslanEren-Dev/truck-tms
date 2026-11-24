@@ -347,7 +347,7 @@ class MainWindow(QMainWindow):
 
     # ---------------------------------------------------------------- updates
     def check_for_updates(self) -> None:
-        """Help → Check for updates: same check, but always says what it found."""
+        """Help → Check for Updates: same check, but always says what it found."""
         self._manual_check = True
         self.updates.start()
 

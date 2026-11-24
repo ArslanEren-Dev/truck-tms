@@ -39,7 +39,7 @@ systems unless the user specifically requests it.
   (`https://api.github.com/repos/ArslanEren-Dev/truck-tms/releases/latest`) to let the user know when a new version
   is available. The request contains no information about the user or their records; GitHub receives only what every
   web request carries, such as the IP address. The check can be turned off under **Settings → Updates**, and
-  **Help → Check for updates** runs it on demand.
+  **Help → Check for Updates** runs it on demand.
 - Any other network access happens only when the user chooses **Help → Project Website**, **Source Code on GitHub**
   or **Report a Problem**, which opens the page in the user's own web browser.
 

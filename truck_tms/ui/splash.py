@@ -19,13 +19,15 @@ WIDTH, HEIGHT = 620, 360
 
 
 def _mix(a: str, b: str, k: float) -> QColor:
-    """Colour between ``a`` (k=0) and ``b`` (k=1)."""
+    """Color between ``a`` (k=0) and ``b`` (k=1)."""
     ca, cb = QColor(a), QColor(b)
     return QColor(int(ca.red() + (cb.red() - ca.red()) * k), int(ca.green() + (cb.green() - ca.green()) * k),
                   int(ca.blue() + (cb.blue() - ca.blue()) * k))
 
 
-STARS = [((37 * i) % WIDTH, 18 + (53 * i) % 150) for i in range(1, 36)]
+# stars stay clear of the title in the top left corner
+STARS = [(x, y) for x, y in (((37 * i) % WIDTH, 14 + (53 * i) % 140) for i in range(1, 48))
+         if not (x < 380 and y < 110)][:30]
 # (x, width, height) of the buildings behind the hills
 SKYLINE = [(150, 26, 52), (180, 18, 78), (202, 30, 40), (236, 22, 96), (262, 34, 60), (300, 20, 84),
            (324, 28, 46), (356, 24, 70)]
@@ -106,13 +108,16 @@ class SplashScreen(QWidget):
                 p.drawEllipse(QPointF(x, y), 1.2 + (i % 3) * 0.4, 1.2 + (i % 3) * 0.4)
         # the sun goes down, the moon comes up
         sun_y = 150 + k * 110
-        p.setBrush(QColor(255, 196, 92, int(230 * (1 - k))))
+        p.setBrush(QColor(255, 196, 92, int(230 * (1 - k) ** 2)))  # fades out as it sets
         p.drawEllipse(QPointF(470, sun_y), 34, 34)
-        moon = QColor(244, 246, 255, int(230 * k))
-        p.setBrush(moon)
-        p.drawEllipse(QPointF(520, 150 - k * 60), 16, 16)
-        p.setBrush(_mix("#1E63C6", "#0A1430", k))
-        p.drawEllipse(QPointF(527, 145 - k * 60), 14, 14)
+        # a crescent: the moon's disc minus a slightly shifted disc
+        centre = QPointF(520, 150 - k * 60)
+        disc = QPainterPath()
+        disc.addEllipse(centre, 16, 16)
+        bite = QPainterPath()
+        bite.addEllipse(centre + QPointF(7, -5), 14, 14)
+        p.setBrush(QColor(244, 246, 255, int(230 * k)))
+        p.drawPath(disc.subtracted(bite))
         # city skyline with windows that light up one by one
         base = 236
         for i, (x, w, h) in enumerate(SKYLINE):
