@@ -9,5 +9,15 @@ dist/
 .pytest_cache/
 *.db
 *.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+# files the app creates next to a data file: attached documents, backups, self-test log
+*_documents/
+backups/
+self_test.log
+.ruff_cache/
+.coverage
+htmlcov/
 .idea/
 .vscode/

@@ -43,6 +43,7 @@ from .widgets import (
     Badge,
     STATUS_TONES,
     show_error,
+    show_warning,
     status_badge,
     truck_combo,
 )
@@ -266,6 +267,12 @@ class LoadDialog(QDialog):
         self.accept()
 
 
+def undated_note(loads: list[Load]) -> str:
+    """' · ⚠ 2 loads without a date…': reports and pay summaries cannot place them in a period."""
+    count = sum(1 for load in loads if not load.report_date)
+    return f" · ⚠ {t('load.undated', n=count)}" if count else ""
+
+
 class LoadsTab(CrudTab):
     empty_key = "loads"
     empty_icon = "layers"
@@ -388,6 +395,14 @@ class LoadsTab(CrudTab):
         load = self.db.get_load(load_id)
         if load is None or load.status == status:
             return
+        invoice = self.db.invoice_for_load(load_id)
+        if status in ("invoiced", "paid"):
+            # these columns follow the invoice: create it, or record the payment, in the invoice dialog
+            self.invoice_selected(load_id)
+            return
+        if invoice is not None:
+            show_warning(self, t("board.has_invoice", number=invoice.invoice_number))
+            return
         load.status = status
         try:
             self.db.update_load(load)
@@ -454,6 +469,7 @@ class LoadsTab(CrudTab):
             f"{t('load.total_miles')}: {number(sum(load.total_miles for load in counted))} · "
             f"{t('load.gross')}: {money(sum(load.gross for load in counted), cur)} · "
             f"{t('load.profit')}: {money(sum(p.profit for p in profits.values()), cur)}"
+            + undated_note(counted)
         )
         doc_counts = self.db.document_counts()
         rows = []

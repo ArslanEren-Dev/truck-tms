@@ -11,11 +11,21 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "ArslanEren-Dev" }]
 requires-python = ">=3.12"
-dependencies = ["PySide6>=6.5"]
+dependencies = ["PySide6>=6.12"]  # the version the app is built and tested with
 keywords = ["tms", "trucking", "logistics", "fleet", "dispatch", "pyside6"]
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Natural Language :: English",
+    "Natural Language :: Turkish",
     "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: MacOS X",
     "Environment :: X11 Applications :: Qt",
     "Topic :: Office/Business",
 ]

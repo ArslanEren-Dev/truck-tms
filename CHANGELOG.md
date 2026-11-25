@@ -2,6 +2,27 @@
 
 All notable changes to Truck TMS. Türkçe özet her sürümün altında.
 
+## [Unreleased]
+
+### Fixed
+- **Load board and invoices stay in step**: dropping a card on *Invoiced* or *Paid* now opens the invoice
+  (a new one filled from the load, or the existing one to record the payment) instead of only changing the status.
+  A load that has an invoice can no longer be dragged back to an earlier column; the app explains why.
+- **Overpaid invoices**: the invoice form shows *Overpaid by …* in red and asks before saving when the amount
+  received plus the fee is more than the invoice amount.
+- **Loads without a date**: the Loads page now says how many loads have no pickup or delivery date, because
+  reports, driver pay and statements (unless a week is chosen) cannot count them.
+
+### Changed
+- PySide6 6.12 or newer is required (the version the app is built and tested with); package classifiers now list
+  Windows, macOS, Linux and Python 3.12/3.13.
+- `.gitignore` also skips attached-document folders, backups, SQLite journal files, the self-test log and tool caches.
+- README: system requirements (Windows 10 or 11, 64-bit), the two-day rule of the *Today* invoice reminder, how
+  undated loads are handled and how the update check works.
+
+**Türkçe:** yük panosu artık faturayla uyumlu (Faturalandı/Ödendi sütunu fatura penceresini açar, faturalı yük geri
+çekilemez), fazla ödemede uyarı, tarihsiz yükler için uyarı, PySide6 ≥ 6.12, daha eksiksiz `.gitignore` ve README.
+
 ## [0.7.0] — 2026-11-24
 
 ### Added

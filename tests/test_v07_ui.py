@@ -187,6 +187,56 @@ def test_board_view_moves_loads_and_remembers_the_view(window, db):
     assert page.body.currentWidget() is page.table
 
 
+def test_board_invoice_columns_follow_the_invoice(window, db, monkeypatch):
+    """Dropping a card on Invoiced / Paid opens the invoice; a load with an invoice cannot be moved back."""
+    from truck_tms.ui import loads as loads_ui
+    from truck_tms.ui.loads import LoadsTab
+
+    page = window.tabs.widget(window.page_index(LoadsTab))
+    opened, warned = [], []
+    monkeypatch.setattr(LoadsTab, "invoice_selected", lambda self, load_id=None: opened.append(load_id) or False)
+    monkeypatch.setattr(loads_ui, "show_warning", lambda parent, text: warned.append(text))
+    page.move_load(1, "paid")
+    assert opened == [1] and db.get_load(1).status == "planned"  # nothing changes until the invoice is saved
+    db.add_invoice(Invoice(invoice_number="INV-9", issue_date="2026-03-01", amount=500, load_id=1))
+    assert db.get_load(1).status == "invoiced"
+    page.move_load(1, "delivered")
+    assert db.get_load(1).status == "invoiced" and "INV-9" in warned[0]
+
+
+def test_loads_page_counts_loads_without_a_date(window, db):
+    from truck_tms.ui.loads import LoadsTab, undated_note
+
+    assert undated_note([Load(rate=1), Load(delivery_date="2026-03-01")]).endswith(
+        "1 load(s) without a date: left out of reports, driver pay and statements (unless a week is set)")
+    assert undated_note([Load(pickup_date="2026-03-01")]) == ""
+    db.add_load(Load(truck_id=1, load_number="#NODATE", rate=300))
+    page = window.tabs.widget(window.page_index(LoadsTab))
+    page.refresh()
+    assert "without a date" in page.totals.text()
+
+
+def test_invoice_dialog_warns_about_overpayment(app, db, monkeypatch):
+    from truck_tms.ui import invoices as invoices_ui
+    from truck_tms.ui.invoices import InvoiceDialog
+
+    asked = []
+    monkeypatch.setattr(invoices_ui, "confirm_action", lambda parent, text, yes: asked.append(text) or False)
+    dialog = InvoiceDialog(db, None)
+    dialog.amount.setText("2000")
+    dialog.paid_amount.setText("2000")
+    dialog.fee.setText("60")
+    assert "Overpaid by $60.00" in dialog.balance.text()
+    dialog.save()
+    assert "$60.00" in asked[0] and db.list_invoices() == []  # "No" keeps the dialog open, nothing saved
+    monkeypatch.setattr(invoices_ui, "confirm_action", lambda parent, text, yes: True)
+    dialog.save()
+    assert db.list_invoices()[0].balance == -60
+    dialog.paid_amount.setText("1940")
+    assert "Balance Due: <b>$0.00</b>" in dialog.balance.text()
+    dialog.deleteLater()
+
+
 def test_details_panel_opens_and_closes(window):
     from truck_tms.ui.loads import LoadsTab
 

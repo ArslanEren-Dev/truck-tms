@@ -959,6 +959,21 @@ STRINGS: dict[str, dict[str, str]] = {
     "view.board": {"en": "Board", "tr": "Pano"},
     "board.profit": {"en": "Profit {amount}", "tr": "Kâr {amount}"},
     "board.moved": {"en": "{number} moved to {status}", "tr": "{number} şimdi: {status}"},
+    "board.has_invoice": {
+        "en": "This load has invoice {number}, so its status follows the invoice. "
+              "To move it back, delete the invoice on the Invoices page first.",
+        "tr": "Bu yükün {number} numaralı faturası var, bu yüzden durumu faturaya göre belirlenir. "
+              "Geri taşımak için önce Faturalar sayfasından faturayı silin.",
+    },
+    "load.undated": {
+        "en": "{n} load(s) without a date: left out of reports, driver pay and statements (unless a week is set)",
+        "tr": "Tarihi olmayan {n} yük: raporlara, sürücü ödemelerine ve statement'lara (hafta seçilmedikçe) girmez",
+    },
+    "inv.overpaid": {"en": "Overpaid by {amount}", "tr": "Fazla ödeme: {amount}"},
+    "inv.overpaid_confirm": {
+        "en": "The amount received plus the fee is {amount} more than the invoice amount. Save anyway?",
+        "tr": "Alınan tutar ile kesintinin toplamı, fatura tutarından {amount} fazla. Yine de kaydedilsin mi?",
+    },
     "detail.no_invoice": {"en": "No invoice yet", "tr": "Henüz fatura yok"},
     "dash.morning": {"en": "Good morning", "tr": "Günaydın"},
     "dash.afternoon": {"en": "Good afternoon", "tr": "İyi günler"},

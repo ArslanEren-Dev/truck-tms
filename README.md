@@ -44,8 +44,8 @@ It is written in Python + Qt (PySide6), stores its data in a single SQLite file,
   (Planned → Dispatched → In Transit → Delivered → Invoiced → Paid). Drag a card to the next column to update the load.
 - **Details panel** *(new in 0.7)*: click a load and a panel slides in from the right with the route, dates, truck,
   driver, the profit breakdown with a margin gauge, and the invoice status. Edit or invoice it from there.
-- **Today** *(new in 0.7)*: the Overview lists today's pickups and deliveries, late deliveries and delivered loads
-  that still need an invoice, each one a click away. A new, empty file shows a three-step **getting started** guide.
+- **Today** *(new in 0.7)*: the Overview lists today's pickups and deliveries, late deliveries and loads
+  delivered two or more days ago that still have no invoice, each one a click away. A new, empty file shows a three-step **getting started** guide.
 - **Profit per load** *(new in 0.7)*: an estimated profit and profit per mile for every load, in green or red.
   It is the gross minus the dispatch fee, the driver's pay and fuel (the truck's fuel cost per mile).
 - **Driver pay summary** *(new in 0.7)*: what each driver earned this month, last month, this quarter, this year or between
@@ -86,7 +86,7 @@ It is written in Python + Qt (PySide6), stores its data in a single SQLite file,
   - It warns you about miles without a state split and about missing rates.
 - **Update check** *(new in 0.6)*: once a day the app asks GitHub whether a new version is out.
   If there is one, an *Update Available* button appears. You can also run the check from **Help → Check for Updates**,
-  or turn it off in Settings. The app only reads the public release page and sends no data.
+  or turn it off in Settings. The app only reads the latest public release from the GitHub API and sends no data about you or your records.
 - **Maintenance**: service records with odometer, cost, shop, details, and the next due date or odometer.
   Trucks that are due for service are highlighted.
 - **Expenses** and a **Truck report** for any date range: gross, miles, expenses + maintenance, and net. Export it as PDF/CSV or print it.
@@ -161,11 +161,14 @@ Driver balance = driver net pay − amount actually paid to the driver
 ```
 
 A load belongs to the week of its delivery date (or its pickup date if there is no delivery date).
-You can also choose the week by hand on the load.
+You can also choose the week by hand on the load. A load with no pickup or delivery date and no week chosen
+is not part of any statement, and reports and the driver pay summary skip loads without a date.
+The Loads page shows how many such loads there are.
 
 ## Download (Windows)
 
 Every [release](https://github.com/ArslanEren-Dev/truck-tms/releases/latest) has two downloads. Neither needs Python.
+**Requirements:** Windows 10 or 11, 64-bit.
 
 | File | What it is |
 |---|---|
@@ -311,13 +314,15 @@ Python + Qt (PySide6) ile yazılmıştır. Veriler tek bir SQLite dosyasında tu
 - **Yükler**: tüm detaylar isteğe bağlıdır. **Load # her zaman `#` ile başlar.** Bir yükte tır, **yükü süren sürücü**,
   broker, **rate**, **ek ücret** (detention, layover, lumper), **yüklü mil**, **boş mil (dead mile)** ve **TONU** bilgisi bulunabilir.
   **Toplam mil**, **yük başına brüt (gross)** ve **mil başına rate** otomatik hesaplanır. Listede her yükün
-  **hangi statement haftasına dâhil olduğu** görünür.
+  **hangi statement haftasına dâhil olduğu** görünür. Yük, teslim tarihinin (yoksa yükleme tarihinin) haftasına girer;
+  hafta elle de seçilebilir. Hiç tarihi olmayan ve haftası seçilmemiş yükler statement'a girmez; raporlar ve sürücü ödeme
+  özeti de tarihi olmayan yükleri saymaz. Yükler sayfası bu yüklerin sayısını gösterir.
 - **Yük panosu** *(0.7'de yeni)*: Yükler sayfası liste ile **pano** arasında geçiş yapar. Panoda her durum bir sütundur
   (Planlandı → Yola Çıkarıldı → Yolda → Teslim Edildi → Faturalandı → Ödendi). Kartı sürükleyip bırakınca yükün durumu değişir.
 - **Detay paneli** *(0.7'de yeni)*: bir yüke tıklayınca sağdan bir panel kayarak açılır: rota, tarihler, tır, sürücü,
   kâr göstergesiyle kâr dökümü ve fatura durumu. Düzenleme ve faturalama oradan yapılabilir.
-- **Bugün** *(0.7'de yeni)*: Genel Bakış'ta bugünkü yüklemeler ve teslimatlar, geciken teslimatlar ve faturalanmayı
-  bekleyen yükler, her biri tek tıkla açılır. Yeni ve boş bir dosyada üç adımlık **başlangıç rehberi** çıkar.
+- **Bugün** *(0.7'de yeni)*: Genel Bakış'ta bugünkü yüklemeler ve teslimatlar, geciken teslimatlar ve teslimatının
+  üzerinden iki gün geçtiği hâlde hâlâ faturası kesilmemiş yükler, her biri tek tıkla açılır. Yeni ve boş bir dosyada üç adımlık **başlangıç rehberi** çıkar.
 - **Yük başına kâr** *(0.7'de yeni)*: her yük için tahmini kâr ve mil başına kâr, yeşil veya kırmızı renkte.
   Brütten dispatch ücreti, sürücü ödemesi ve yakıt (tırın mil başına yakıt maliyeti) düşülür.
 - **Sürücü ödeme özeti** *(0.7'de yeni)*: her sürücünün bu ay, geçen ay, bu çeyrek, bu yıl veya istediğiniz tarihler
@@ -359,7 +364,7 @@ Python + Qt (PySide6) ile yazılmıştır. Veriler tek bir SQLite dosyasında tu
   - Eyalete bölünmemiş miller ve eksik oranlar için uyarı verir.
 - **Güncelleme bildirimi** *(0.6'da yeni)*: uygulama günde bir kez GitHub'a yeni sürüm olup olmadığını sorar.
   Yeni sürüm varsa *Güncelleme Var* butonu çıkar. **Yardım → Güncellemeleri Denetle** ile elle de bakabilir, Ayarlar'dan
-  kapatabilirsiniz. Uygulama yalnızca herkese açık sürüm sayfasını okur, hiçbir veri göndermez.
+  kapatabilirsiniz. Uygulama GitHub API'sinden yalnızca herkese açık son sürüm bilgisini okur; size veya kayıtlarınıza ait hiçbir veri göndermez.
 - **Bakım**: sayaç, tutar, servis, detaylar, sonraki bakım tarihi veya sayacı. Bakımı gelen tırlar kırmızı ile işaretlenir.
 - **Masraflar** ve tarih aralığına göre **tır raporu** (PDF/CSV olarak dışa aktarma veya yazdırma).
 - **Verileriniz her zaman kayıtlı**:
@@ -401,6 +406,7 @@ Python + Qt (PySide6) ile yazılmıştır. Veriler tek bir SQLite dosyasında tu
 ### İndir (Windows)
 
 Her [sürümde](https://github.com/ArslanEren-Dev/truck-tms/releases/latest) iki dosya bulunur; ikisi de Python gerektirmez.
+**Gereksinim:** Windows 10 veya 11, 64-bit.
 
 | Dosya | Nedir |
 |---|---|

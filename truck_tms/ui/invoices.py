@@ -39,6 +39,7 @@ from .widgets import (
     button,
     buttons_box,
     choice_combo,
+    confirm_action,
     date_edit,
     hint_label,
     set_combo_data,
@@ -177,7 +178,11 @@ class InvoiceDialog(QDialog):
         self.due.setText(t("inv.due_on", date=due))
         amount, fee, paid = self._values()
         balance = round(amount - fee - paid, 2)
-        self.balance.setText(f"{t('inv.balance')}: <b>{money(balance, self.cur)}</b>")
+        if balance < -0.005:  # more was received (plus the fee) than the invoice amount
+            self.balance.setText(f"<span style='color:{token('danger_fg')}'>"
+                                 f"{t('inv.overpaid', amount=money(-balance, self.cur))}</span>")
+        else:
+            self.balance.setText(f"{t('inv.balance')}: <b>{money(balance, self.cur)}</b>")
         number = self.number.text().strip()
         self.page.header.set_subtitle(" · ".join(x for x in (number, money(amount, self.cur) if amount else "") if x)
                                       or t("inv.subtitle"))
@@ -204,6 +209,9 @@ class InvoiceDialog(QDialog):
                 paid_date=self.paid_date.value(),
                 notes=self.notes.toPlainText(),
             )
+            if inv.amount is not None and inv.balance < -0.005 and not confirm_action(
+                    self, t("inv.overpaid_confirm", amount=money(-inv.balance, self.cur)), t("btn.save")):
+                return
             if inv.id is None:
                 inv.id = self.db.add_invoice(inv)
             else:
